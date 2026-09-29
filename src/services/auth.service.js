@@ -1,7 +1,7 @@
-import bcrypt from 'bcryptjs';
-import jwt from 'jsonwebtoken';
-import { config } from '../config/environment.js';
-import { userRepository } from '../repositories/user.repository.js';
+const bcrypt = require('bcryptjs');
+const jwt = require('jsonwebtoken');
+const { getConfig } = require('../config/environment');
+const { userRepository } = require('../repositories/user.repository');
 
 const BCRYPT_ROUNDS = 12;
 const DUMMY_PASSWORD_HASH = '$2b$12$C6UzMDM.H6dfI/f/IKcEe.1aJ9V7Z7YQ8Jw7b4h5x6z7A8B9C0D1e';
