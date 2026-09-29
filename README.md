@@ -1,6 +1,30 @@
-# User Authentication Microservice
+# Authentication Microservice
 
-A Node.js REST microservice that provides user signup and login functionality.
+Node.js/Express REST microservice for email/password signup and login with bcrypt, JWT, PostgreSQL, Prisma, Zod, and Helmet.
+
+## Endpoints
+
+- `GET /health` returns `{ "status": "ok" }`.
+- `POST /api/auth/signup` creates an account and returns a JWT (`201`); duplicate emails return `409`.
+- `POST /api/auth/login` authenticates credentials and returns a JWT (`200`); invalid credentials return `401`.
+
+Emails are trimmed and normalized to lowercase. Passwords must contain at least eight characters, are stored only as bcrypt hashes, and are never returned.
+
+## Setup
+
+Requires Node.js 20+, npm, and PostgreSQL 14+.
+
+```bash
+npm install
+cp .env.example .env
+npm run db:generate
+npm run db:migrate
+npm run dev
+```
+
+Run the mocked Vitest/Supertest suite with `npm test`; no live database is required.
+
+Configuration: `DATABASE_URL` and a `JWT_SECRET` of at least 32 characters are required. `PORT` defaults to `3000`; `JWT_EXPIRES_IN` defaults to `1h`.
 
 ## Overview
 
