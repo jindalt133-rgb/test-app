@@ -1,11 +1,10 @@
 import bcrypt from 'bcryptjs';
 import jwt from 'jsonwebtoken';
-import { randomUUID } from 'node:crypto';
 import { config } from '../config/environment.js';
-import {
-  createUser,
-  findUserByEmail
-} from '../repositories/user.repository.js';
+import { userRepository } from '../repositories/user.repository.js';
+
+const BCRYPT_ROUNDS = 12;
+const DUMMY_PASSWORD_HASH = '$2b$12$C6UzMDM.H6dfI/f/IKcEe.1aJ9V7Z7YQ8Jw7b4h5x6z7A8B9C0D1e';
 
 export class ApplicationError extends Error {
   constructor(status, code, message) {
@@ -89,7 +88,7 @@ function createAccessToken(user) {
 
 export async function signup(input) {
   const { email, password } = validateCredentials(input);
-  const existingUser = await findUserByEmail(email);
+  const existingUser = userRepository.findByEmail(email);
 
   if (existingUser) {
     throw new ApplicationError(
@@ -99,16 +98,12 @@ export async function signup(input) {
     );
   }
 
-  const passwordHash = await bcrypt.hash(password, config.bcryptSaltRounds);
+  const passwordHash = await bcrypt.hash(password, BCRYPT_ROUNDS);
 
   let user;
 
   try {
-    user = await createUser({
-      id: randomUUID(),
-      email,
-      passwordHash
-    });
+    user = userRepository.create({ email, passwordHash });
   } catch (error) {
     if (error.code === '23505') {
       throw new ApplicationError(
@@ -129,7 +124,7 @@ export async function signup(input) {
 
 export async function login(input) {
   const { email, password } = validateCredentials(input);
-  const user = await findUserByEmail(email);
+  const user = userRepository.findByEmail(email);
 
   if (!user) {
     throw new ApplicationError(
@@ -139,7 +134,7 @@ export async function login(input) {
     );
   }
 
-  const passwordMatches = await bcrypt.compare(password, user.password_hash);
+  const passwordMatches = await bcrypt.compare(password, user.passwordHash);
 
   if (!passwordMatches) {
     throw new ApplicationError(
