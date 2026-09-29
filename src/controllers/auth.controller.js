@@ -1,13 +1,9 @@
 import { login, signup } from '../services/auth.service.js';
 
-export async function signupController(request, response) {
-  const result = await signup(request.body);
-
-  response.status(201).json(result);
+export async function signupController(req, res) {
+  return res.status(201).json(await signup(req.body));
 }
 
-export async function loginController(request, response) {
-  const result = await login(request.body);
-
-  response.status(200).json(result);
+export async function loginController(req, res) {
+  return res.status(200).json(await login(req.body));
 }
