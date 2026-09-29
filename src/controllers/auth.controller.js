@@ -1,9 +1,5 @@
-import { login, signup } from '../services/auth.service.js';
+import * as authService from '../services/auth.service.js';
 
-export async function signupController(req, res) {
-  return res.status(201).json(await signup(req.body));
-}
+export const signup = async (req, res, next) => { try { res.status(201).json(await authService.signup(req.body)); } catch (error) { next(error); } };
 
-export async function loginController(req, res) {
-  return res.status(200).json(await login(req.body));
-}
+export const login = async (req, res, next) => { try { res.status(200).json(await authService.login(req.body)); } catch (error) { next(error); } };
