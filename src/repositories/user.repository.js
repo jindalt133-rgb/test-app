@@ -1,14 +1,8 @@
 import { randomUUID } from 'node:crypto';
 
-export class UserRepository {
-  #usersByEmail = new Map();
-  findByEmail(email) { return this.#usersByEmail.get(email) ?? null; }
-  create({ email, passwordHash }) {
-    if (this.#usersByEmail.has(email)) { const error = new Error('A user with this email already exists'); error.code = 'USER_ALREADY_EXISTS'; throw error; }
-    const user = { id: randomUUID(), email, passwordHash, createdAt: new Date().toISOString() };
-    this.#usersByEmail.set(email, user);
-    return user;
-  }
-  clear() { this.#usersByEmail.clear(); }
+class UserRepository {
+  constructor(databasePool) { this.databasePool = databasePool; }
+  async findByEmail(email) { const result = await this.databasePool.query('SELECT id, email, password_hash FROM users WHERE email = $1 LIMIT 1', [email]); return result.rows[0] || null; }
+  async create({ email, passwordHash }) { const result = await this.databasePool.query('INSERT INTO users (email, password_hash) VALUES ($1, $2) RETURNING id, email', [email, passwordHash]); return result.rows[0]; }
 }
-export const userRepository = new UserRepository();
+module.exports = { UserRepository };
