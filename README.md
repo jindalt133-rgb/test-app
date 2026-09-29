@@ -1,3 +1,15 @@
-# Test App
+# Quiz CLI
 
-A sample microservice built for testing EliteA automated documentation synchronization.
+An interactive command-line quiz game for learning JavaScript.
+
+## Usage
+
+```bash
+npm start
+```
+
+## Tests
+
+```bash
+npm test
+```
