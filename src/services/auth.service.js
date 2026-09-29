@@ -1,23 +1,14 @@
-const bcrypt = require('bcryptjs');
-const jwt = require('jsonwebtoken');
-const { getConfig } = require('../config/environment');
-const { userRepository } = require('../repositories/user.repository');
+import bcrypt from 'bcryptjs';
+import jwt from 'jsonwebtoken';
+import { env } from '../config/env.js';
+import { createUser, findUserByEmail } from '../repositories/user.repository.js';
 
-const BCRYPT_ROUNDS = 12;
-const DUMMY_PASSWORD_HASH = '$2b$12$C6UzMDM.H6dfI/f/IKcEe.1aJ9V7Z7YQ8Jw7b4h5x6z7A8B9C0D1e';
+const PASSWORD_HASH_ROUNDS = 12;
 
-export class ApplicationError extends Error {
-  constructor(status, code, message) {
-    super(message);
-    this.name = 'ApplicationError';
-    this.status = status;
-    this.code = code;
-  }
-}
+const createServiceError = (message, statusCode, code) => { const error = new Error(message); error.statusCode = statusCode; error.code = code; return error; };
 
-function normalizeEmail(email) {
-  return email.trim().toLowerCase();
-}
+const toPublicUser = (user) => ({ id: user.id, email: user.email });
+const createToken = (user) => jwt.sign({ sub: user.id, email: user.email }, env.JWT_SECRET, { expiresIn: env.JWT_EXPIRES_IN });
 
 function validateCredentials(input) {
   if (!input || typeof input !== 'object' || Array.isArray(input)) {
@@ -86,52 +77,35 @@ function createAccessToken(user) {
   );
 }
 
-export async function signup(input) {
-  const { email, password } = validateCredentials(input);
-  const existingUser = userRepository.findByEmail(email);
+export const signup = async ({ email, password }) => {
+  const existingUser = await findUserByEmail(email);
 
-  if (existingUser) {
-    throw new ApplicationError(
-      409,
-      'EMAIL_ALREADY_REGISTERED',
-      'An account with this email already exists'
-    );
-  }
+  if (existingUser) throw createServiceError('An account already exists for this email address', 409, 'EMAIL_ALREADY_REGISTERED');
 
-  const passwordHash = await bcrypt.hash(password, BCRYPT_ROUNDS);
+  const passwordHash = await bcrypt.hash(password, PASSWORD_HASH_ROUNDS);
 
   let user;
 
   try {
-    user = userRepository.create({ email, passwordHash });
+    user = await createUser({ email, passwordHash });
   } catch (error) {
     if (error.code === '23505') {
-      throw new ApplicationError(
-        409,
-        'EMAIL_ALREADY_REGISTERED',
-        'An account with this email already exists'
-      );
+      throw createServiceError('An account already exists for this email address', 409, 'EMAIL_ALREADY_REGISTERED');
     }
 
     throw error;
   }
 
-  return { message: 'User registered successfully' };
-}
+  return { user: toPublicUser(user), token: createToken(user) };
+};
 
-export async function login(input) {
-  const { email, password } = validateCredentials(input);
-  const user = userRepository.findByEmail(email);
-
-  const passwordMatches = await bcrypt.compare(password, user?.passwordHash ?? DUMMY_PASSWORD_HASH);
+export const login = async ({ email, password }) => {
+  const user = await findUserByEmail(email);
+  const passwordMatches = user && await bcrypt.compare(password, user.passwordHash);
 
   if (!passwordMatches) {
-    throw new ApplicationError(
-      401,
-      'INVALID_CREDENTIALS',
-      'Invalid email or password'
-    );
+    throw createServiceError('Invalid email or password', 401, 'INVALID_CREDENTIALS');
   }
 
-  return { accessToken: createAccessToken(user), tokenType: 'Bearer', expiresIn: config.jwtExpiresIn };
-}
+  return { user: toPublicUser(user), token: createToken(user) };
+};
