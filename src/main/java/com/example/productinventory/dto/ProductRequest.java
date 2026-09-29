@@ -1,0 +1,3 @@
+package com.example.productinventory.dto;
+import jakarta.validation.constraints.*; import java.math.BigDecimal;
+public record ProductRequest(@NotBlank(message="Name must not be blank") String name,@NotBlank(message="Description must not be blank") String description,@NotNull(message="Price is required") @DecimalMin(value="0.0",message="Price must be non-negative") BigDecimal price,@NotNull(message="Quantity is required") @Min(value=0,message="Quantity must be non-negative") Integer quantity,@NotBlank(message="Category must not be blank") String category) {}
