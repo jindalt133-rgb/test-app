@@ -1,32 +1,16 @@
-export function errorHandler(error, request, response, next) {
-  if (response.headersSent) {
-    return next(error);
-  }
+export function notFoundHandler(req, res) {
+  res.status(404).json({ error: 'Route not found' });
+}
 
+export function errorHandler(error, req, res, next) {
+  if (res.headersSent) return next(error);
   if (error instanceof SyntaxError && error.status === 400 && 'body' in error) {
-    return response.status(400).json({
-      error: {
-        code: 'INVALID_JSON',
-        message: 'Request body contains invalid JSON'
-      }
-    });
+    return res.status(400).json({ error: 'Malformed JSON request body' });
   }
-
-  const status = Number.isInteger(error.status) ? error.status : 500;
-  const code = error.code || 'INTERNAL_SERVER_ERROR';
-  const message =
-    status >= 500
-      ? 'An unexpected server error occurred'
-      : error.message;
-
-  if (status >= 500) {
+  const statusCode = Number.isInteger(error.statusCode) && error.statusCode >= 400 ? error.statusCode : 500;
+  if (statusCode >= 500) {
     console.error(error);
+    return res.status(500).json({ error: 'Internal server error' });
   }
-
-  return response.status(status).json({
-    error: {
-      code,
-      message
-    }
-  });
+  return res.status(statusCode).json({ error: error.message });
 }
