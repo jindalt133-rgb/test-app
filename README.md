@@ -1,86 +1,92 @@
-# Authentication Microservice
+# User Authentication Microservice
 
-A Node.js REST microservice that provides user signup and login functionality. The service validates credentials, securely hashes passwords, and returns JSON Web Tokens for authenticated users.
+A Node.js REST microservice that provides user signup and login functionality.
+
+## Overview
+
+This service exposes authentication endpoints for creating user accounts and authenticating existing users. Passwords are securely hashed before persistence, and successful logins return a JSON Web Token (JWT).
 
 ## Features
 
-- `POST /api/auth/signup` creates a user and returns a JWT.
-- `POST /api/auth/login` authenticates a user and returns a JWT.
-- `GET /health` provides a liveness check.
-- Bcrypt password hashing and parameterized PostgreSQL queries.
-- Email normalization and validation, password boundary validation, consistent JSON errors, and graceful shutdown.
+- User signup and login endpoints
+- Password hashing using `bcryptjs`
+- JWT-based authentication responses
+- PostgreSQL-backed user persistence
+- Environment-based configuration
+- JSON REST API
 
 ## Technology Stack
 
-- Node.js 20+, ECMAScript modules, Express, npm
-- PostgreSQL 14+
-- bcryptjs for password hashing
-- jsonwebtoken for access tokens
-- dotenv for environment configuration
+- **Runtime:** Node.js 20 or later
+- **Framework:** Express
+- **Database:** PostgreSQL
+- **Password Hashing:** bcryptjs
+- **Authentication Token:** JSON Web Token
+- **Configuration:** dotenv
 
 ## Project Structure
 
 ```text
 .
-├── .env.example
-├── .gitignore
-├── migrations/001_create_users.sql
 ├── package.json
+├── .env.example
 ├── README.md
-├── src/
-│   ├── app.js
-│   ├── server.js
-│   ├── config/environment.js
-│   ├── controllers/auth.controller.js
-│   ├── db/migrate.js
-│   ├── db/pool.js
-│   ├── middleware/async-handler.js
-│   ├── middleware/error-handler.js
-│   ├── middleware/not-found.js
-│   ├── repositories/user.repository.js
-│   ├── routes/auth.routes.js
-│   └── services/auth.service.js
-└── test/auth.integration.test.js
+├── tests/auth.test.js
+└── src/
+    ├── server.js
+    ├── app.js
+    ├── config/environment.js
+    ├── routes/auth.routes.js
+    ├── controllers/auth.controller.js
+    ├── services/auth.service.js
+    ├── repositories/user.repository.js
+    ├── middleware/error-handler.js
+    └── database/
+        ├── client.js
+        └── migrations/001_create_users.sql
 ```
 
-## Installation and Configuration
+## REST API
+
+`GET /health` returns `{ "status": "ok" }`.
+
+`POST /api/auth/signup` accepts an email and password and returns `201 Created` with `{ "message": "User created successfully" }`.
+
+`POST /api/auth/login` accepts an email and password and returns a `200 OK` response containing a JWT, `Bearer` token type, and configured expiration.
+
+Passwords are never returned in API responses. Invalid input returns `400`, duplicate email signup returns `409`, and invalid login credentials return `401`.
+
+## Installation
 
 Prerequisites: Node.js 20+, npm, and PostgreSQL 14+.
 
 ```bash
 npm install
 cp .env.example .env
-npm run db:migrate
+```
+
+Apply `src/database/migrations/001_create_users.sql` before using the service. Required environment variables are `DATABASE_URL` and `JWT_SECRET` (at least 16 characters). `PORT` defaults to `3000`; `JWT_EXPIRES_IN` defaults to `1h`.
+
+```bash
 npm start
 ```
 
-Required environment variables are `DATABASE_URL` and `JWT_SECRET` (at least 32 characters). Optional variables are `PORT` (default `3000`), `JWT_EXPIRES_IN` (default `1h`), and `BCRYPT_SALT_ROUNDS` (8–15, default `12`). Never commit `.env` or real secrets.
+For development:
 
-## API
-
-Signup and login accept JSON such as:
-
-```json
-{"email":"user@example.com","password":"strong-password"}
+```bash
+npm run dev
 ```
-
-Successful responses contain a public `{ "user": { "id", "email" }, "token" }` object. Emails are trimmed and lowercased; passwords must be 8–128 characters and are never returned or stored in plaintext. Authentication failures return the generic `INVALID_CREDENTIALS` error. API errors use `{ "error": { "code", "message" } }`.
-
-The migration creates a `users` table with UUID IDs, unique normalized emails, bcrypt password hashes, and timestamps. Run `npm run db:migrate` before using signup or login.
 
 ## Testing
 
-The integration suite uses Node's built-in `node:test` framework and requires a configured PostgreSQL database and applied migration:
-
-```bash
-npm run db:migrate && npm test
-```
-
-The approved test suite covers health checks, signup and login success/failure paths, duplicate emails, email normalization, JWT claims, bcrypt hashing, validation boundaries, malformed JSON, and unknown routes. Runtime tests were statically validated but were not executed in the generation environment.
+Run `npm test`. The generated suite uses Node's built-in test runner and an in-memory repository to test the HTTP contract without requiring PostgreSQL.
 
 ## Security
 
-JWT secrets are environment-only, SQL queries are parameterized, password hashes are excluded from responses, and unexpected errors do not expose internal details. Production deployments should use HTTPS, rate limiting, and centralized logging.
+- Store only password hashes, never plaintext passwords.
+- Use a strong, randomly generated `JWT_SECRET`.
+- Use HTTPS in deployed environments.
+- Keep secrets outside source control.
 
 ## Original User Story
 
