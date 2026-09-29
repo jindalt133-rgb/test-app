@@ -1,12 +1,3 @@
-export const validate = (schema) => (req, _res, next) => {
-  const result = schema.safeParse(req.body);
-  if (!result.success) {
-    const error = new Error('Request validation failed');
-    error.statusCode = 400;
-    error.code = 'VALIDATION_ERROR';
-    error.details = result.error.issues.map((issue) => ({ field: issue.path.join('.') || 'body', message: issue.message }));
-    return next(error);
-  }
-  req.body = result.data;
-  return next();
-};
+import { body, validationResult } from 'express-validator';
+import { AppError } from '../services/authService.js';
+export const validateCredentials = [body('email').isString().withMessage('Email is required').bail().trim().isEmail().withMessage('A valid email address is required').normalizeEmail(), body('password').isString().withMessage('Password is required').bail().isLength({ min: 8 }).withMessage('Password must be at least 8 characters long'), (request, response, next) => { const errors = validationResult(request); if (!errors.isEmpty()) return next(new AppError(400, 'VALIDATION_ERROR', 'Request validation failed', errors.array().map((error) => ({ field: error.path, message: error.msg })))); return next(); }];
