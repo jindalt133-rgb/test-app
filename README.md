@@ -1,6 +1,6 @@
-# User Authentication Microservice
+# Authentication Microservice
 
-A Node.js 20+ Express microservice providing REST API endpoints for user registration and authentication.
+A Node.js REST microservice that provides user signup and login functionality. The service validates credentials, securely hashes passwords, and returns JSON Web Tokens for authenticated users.
 
 ## Features
 
