@@ -1,16 +1,23 @@
 {
-  "name": "quiz-cli",
+  "name": "user-authentication-microservice",
   "version": "1.0.0",
-  "description": "An interactive command-line quiz game for learning JavaScript",
-  "main": "index.js",
+  "description": "A Node.js REST microservice providing user signup and login endpoints.",
+  "private": true,
   "type": "module",
+  "engines": {
+    "node": ">=20.0.0"
+  },
   "scripts": {
-    "start": "node index.js",
+    "start": "node src/server.js",
+    "dev": "node --watch src/server.js",
+    "db:migrate": "node src/db/migrate.js",
     "test": "node --test"
   },
-  "keywords": ["cli", "quiz", "game", "educational"],
-  "license": "MIT",
-  "engines": {
-    "node": ">=18.0.0"
+  "dependencies": {
+    "bcryptjs": "^2.4.3",
+    "dotenv": "^16.4.5",
+    "express": "^4.21.1",
+    "jsonwebtoken": "^9.0.2",
+    "pg": "^8.13.1"
   }
 }
