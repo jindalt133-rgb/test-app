@@ -24,8 +24,12 @@ if (jwtSecret.length < 32) {
   throw new Error('JWT_SECRET must contain at least 32 characters');
 }
 
-export const config = Object.freeze({
-  port: parsePort(process.env.PORT),
-  jwtSecret,
-  jwtExpiresIn: process.env.JWT_EXPIRES_IN?.trim() || '1h'
-});
+function getConfig() {
+  const databaseUrl = process.env.DATABASE_URL;
+  const jwtSecret = process.env.JWT_SECRET;
+  if (!databaseUrl) throw new Error('DATABASE_URL is required');
+  if (!jwtSecret) throw new Error('JWT_SECRET is required');
+  if (jwtSecret.length < 16) throw new Error('JWT_SECRET must be at least 16 characters long');
+  return { port: parsePort(process.env.PORT), databaseUrl, jwtSecret, jwtExpiresIn: process.env.JWT_EXPIRES_IN?.trim() || '1h' };
+}
+module.exports = { getConfig };
