@@ -116,25 +116,14 @@ export async function signup(input) {
     throw error;
   }
 
-  return {
-    user: toPublicUser(user),
-    token: createAccessToken(user)
-  };
+  return { message: 'User registered successfully' };
 }
 
 export async function login(input) {
   const { email, password } = validateCredentials(input);
   const user = userRepository.findByEmail(email);
 
-  if (!user) {
-    throw new ApplicationError(
-      401,
-      'INVALID_CREDENTIALS',
-      'Invalid email or password'
-    );
-  }
-
-  const passwordMatches = await bcrypt.compare(password, user.passwordHash);
+  const passwordMatches = await bcrypt.compare(password, user?.passwordHash ?? DUMMY_PASSWORD_HASH);
 
   if (!passwordMatches) {
     throw new ApplicationError(
@@ -144,8 +133,5 @@ export async function login(input) {
     );
   }
 
-  return {
-    user: toPublicUser(user),
-    token: createAccessToken(user)
-  };
+  return { accessToken: createAccessToken(user), tokenType: 'Bearer', expiresIn: config.jwtExpiresIn };
 }
