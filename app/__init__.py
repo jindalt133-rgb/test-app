@@ -1,0 +1,1 @@
+"""Library catalog application package."""
