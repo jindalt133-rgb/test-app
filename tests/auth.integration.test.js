@@ -1,0 +1,23 @@
+import assert from 'node:assert/strict';
+import { after, before, test } from 'node:test';
+import http from 'node:http';
+process.env.JWT_SECRET ??= 'test-only-jwt-secret';
+process.env.JWT_EXPIRES_IN ??= '1h';
+process.env.BCRYPT_SALT_ROUNDS ??= '4';
+process.env.NODE_ENV ??= 'test';
+if (!process.env.DATABASE_URL) throw new Error('DATABASE_URL must be set before running the integration tests');
+const { app } = await import('../src/app.js');
+const { initializeDatabase, pool } = await import('../src/config/database.js');
+const jwt = (await import('jsonwebtoken')).default;
+let server; let baseUrl; let counter = 0;
+const uniqueEmail = () => `qa-${Date.now()}-${++counter}@example.test`;
+function request(method, path, body) { return new Promise((resolve, reject) => { const url = new URL(path, baseUrl); const payload = body === undefined ? undefined : JSON.stringify(body); const req = http.request({ method, hostname: url.hostname, port: url.port, path: url.pathname, headers: payload ? { 'content-type': 'application/json', 'content-length': Buffer.byteLength(payload) } : {} }, (res) => { const chunks = []; res.on('data', (chunk) => chunks.push(chunk)); res.on('end', () => { const text = Buffer.concat(chunks).toString(); resolve({ status: res.statusCode, headers: res.headers, body: text ? JSON.parse(text) : undefined }); }); }); req.on('error', reject); if (payload) req.write(payload); req.end(); }); }
+before(async () => { await initializeDatabase(); server = app.listen(0, '127.0.0.1'); await new Promise((resolve) => server.once('listening', resolve)); baseUrl = `http://127.0.0.1:${server.address().port}`; });
+after(async () => { await pool.query(`DELETE FROM users WHERE email LIKE 'qa-%@example.test'`); await new Promise((resolve) => server.close(resolve)); await pool.end(); });
+test('health endpoint returns ok', async () => { const response = await request('GET', '/health'); assert.equal(response.status, 200); assert.deepEqual(response.body, { status: 'ok' }); });
+test('signup returns a JWT and public user', async () => { const email = uniqueEmail(); const response = await request('POST', '/api/auth/signup', { email, password: 'correct-password' }); assert.equal(response.status, 201); assert.equal(response.body.user.email, email); assert.equal(typeof response.body.token, 'string'); assert.equal(response.body.user.password_hash, undefined); assert.equal(jwt.verify(response.body.token, process.env.JWT_SECRET).email, email); });
+test('login returns the expected user by value', async () => { const email = uniqueEmail(); const signup = await request('POST', '/api/auth/signup', { email, password: 'correct-password' }); const login = await request('POST', '/api/auth/login', { email, password: 'correct-password' }); assert.equal(login.status, 200); assert.deepEqual(login.body.user, signup.body.user); });
+test('duplicate signup returns 409', async () => { const email = uniqueEmail(); await request('POST', '/api/auth/signup', { email, password: 'correct-password' }); const response = await request('POST', '/api/auth/signup', { email, password: 'another-password' }); assert.equal(response.status, 409); assert.equal(response.body.error.code, 'EMAIL_ALREADY_REGISTERED'); });
+test('invalid credentials return 401', async () => { const response = await request('POST', '/api/auth/login', { email: uniqueEmail(), password: 'correct-password' }); assert.equal(response.status, 401); assert.equal(response.body.error.code, 'INVALID_CREDENTIALS'); });
+test('validation rejects missing and short credentials', async () => { const response = await request('POST', '/api/auth/signup', { }); assert.equal(response.status, 400); assert.equal(response.body.error.code, 'VALIDATION_ERROR'); });
+test('unknown routes return 404', async () => { const response = await request('GET', '/api/auth/unknown'); assert.equal(response.status, 404); assert.equal(response.body.error.code, 'NOT_FOUND'); });
