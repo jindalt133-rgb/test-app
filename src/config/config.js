@@ -1,0 +1,4 @@
+import 'dotenv/config';
+const required = (name) => { const value = process.env[name]?.trim(); if (!value) throw new Error(`Missing required environment variable: ${name}`); return value; };
+const integer = (value, name, min, max) => { const parsed = Number.parseInt(value, 10); if (!Number.isInteger(parsed) || parsed < min || parsed > max) throw new Error(`${name} must be an integer between ${min} and ${max}`); return parsed; };
+export const config = Object.freeze({ port: integer(process.env.PORT ?? '3000', 'PORT', 1, 65535), databaseUrl: required('DATABASE_URL'), jwtSecret: required('JWT_SECRET'), jwtExpiresIn: process.env.JWT_EXPIRES_IN?.trim() || '1h', bcryptSaltRounds: integer(process.env.BCRYPT_SALT_ROUNDS ?? '12', 'BCRYPT_SALT_ROUNDS', 4, 31), nodeEnv: process.env.NODE_ENV?.trim() || 'development' });
