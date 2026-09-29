@@ -1,7 +1,7 @@
 {
-  "name": "user-authentication-microservice",
+  "name": "authentication-microservice",
   "version": "1.0.0",
-  "description": "A Node.js REST microservice providing user signup and login endpoints.",
+  "description": "A Node.js REST microservice providing user signup and login authentication endpoints.",
   "private": true,
   "type": "module",
   "engines": {
@@ -10,14 +10,12 @@
   "scripts": {
     "start": "node src/server.js",
     "dev": "node --watch src/server.js",
-    "db:migrate": "node src/db/migrate.js",
     "test": "node --test"
   },
   "dependencies": {
-    "bcryptjs": "^2.4.3",
-    "dotenv": "^16.4.5",
-    "express": "^4.21.1",
-    "jsonwebtoken": "^9.0.2",
-    "pg": "^8.13.1"
+    "bcryptjs": "^3.0.2",
+    "dotenv": "^16.4.7",
+    "express": "^5.1.0",
+    "jsonwebtoken": "^9.0.2"
   }
 }
