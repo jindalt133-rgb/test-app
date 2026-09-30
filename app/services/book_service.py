@@ -1,29 +1,82 @@
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
-from app import models
-from app.exceptions import BookNotFoundError, DuplicateISBNError
-from app.repositories import book_repository
-from app.schemas import BookCreate, BookUpdate
 
-def create_book(db: Session, payload: BookCreate) -> models.Book:
-    if book_repository.get_by_isbn(db, payload.isbn) is not None: raise DuplicateISBNError(payload.isbn)
-    book = models.Book(**payload.model_dump())
-    try: return book_repository.create(db, book)
-    except IntegrityError as exc:
-        db.rollback(); raise DuplicateISBNError(payload.isbn) from exc
-def list_books(db: Session, search: str | None = None) -> list[models.Book]:
-    return book_repository.list_books(db, search.strip() if search is not None and search.strip() else None)
-def get_book(db: Session, book_id: int) -> models.Book:
-    book = book_repository.get_by_id(db, book_id)
-    if book is None: raise BookNotFoundError(book_id)
-    return book
-def update_book(db: Session, book_id: int, payload: BookUpdate) -> models.Book:
-    book = get_book(db, book_id)
-    existing = book_repository.get_by_isbn(db, payload.isbn)
-    if existing is not None and existing.id != book_id: raise DuplicateISBNError(payload.isbn)
-    for field_name, value in payload.model_dump().items(): setattr(book, field_name, value)
-    try: return book_repository.save(db, book)
-    except IntegrityError as exc:
-        db.rollback(); raise DuplicateISBNError(payload.isbn) from exc
-def delete_book(db: Session, book_id: int) -> None:
-    book_repository.delete(db, get_book(db, book_id))
+from app.core.errors import AppError
+from app.db.models import Book
+from app.repositories.book_repository import BookRepository
+from app.schemas.book import BookInput
+
+
+class BookService:
+    def __init__(self, db: Session) -> None:
+        self.repository = BookRepository(db)
+
+    def create(self, data: BookInput) -> Book:
+        if self.repository.get_by_isbn(data.isbn) is not None:
+            raise self.duplicate_isbn_error()
+
+        book = Book(**data.model_dump())
+
+        try:
+            return self.repository.create(book)
+        except IntegrityError:
+            self.repository.db.rollback()
+            raise self.duplicate_isbn_error() from None
+
+    def list_all(self) -> list[Book]:
+        return self.repository.list_all()
+
+    def search(self, term: str) -> list[Book]:
+        return self.repository.search(term.strip())
+
+    def get(self, book_id: int) -> Book:
+        book = self.repository.get_by_id(book_id)
+
+        if book is None:
+            raise self.not_found_error()
+
+        return book
+
+    def update(self, book_id: int, data: BookInput) -> Book:
+        book = self.get(book_id)
+
+        existing = self.repository.get_by_isbn(data.isbn)
+
+        if existing is not None and existing.id != book_id:
+            raise self.duplicate_isbn_error()
+
+        for field, value in data.model_dump().items():
+            setattr(book, field, value)
+
+        try:
+            return self.repository.update(book)
+        except IntegrityError:
+            self.repository.db.rollback()
+            raise self.duplicate_isbn_error() from None
+
+    def delete(self, book_id: int) -> None:
+        book = self.get(book_id)
+        self.repository.delete(book)
+
+    @staticmethod
+    def not_found_error() -> AppError:
+        return AppError(
+            status=404,
+            code="BOOK_NOT_FOUND",
+            message="The requested book was not found.",
+            errors=[],
+        )
+
+    @staticmethod
+    def duplicate_isbn_error() -> AppError:
+        return AppError(
+            status=409,
+            code="DUPLICATE_ISBN",
+            message="A book with this ISBN already exists.",
+            errors=[
+                {
+                    "field": "isbn",
+                    "message": "ISBN must be unique.",
+                }
+            ],
+        )
