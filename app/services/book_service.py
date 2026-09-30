@@ -1,10 +1,11 @@
+from fastapi import status
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 
 from app.core.errors import AppError
-from app.db.models import Book
+from app.models.book import Book
 from app.repositories.book_repository import BookRepository
-from app.schemas.book import BookInput
+from app.schemas.book import BookCreate, BookRead, BookUpdate
 
 
 class BookService:
