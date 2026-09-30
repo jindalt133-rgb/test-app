@@ -34,9 +34,3 @@ def client() -> Iterator[TestClient]:
     """Provide an in-process client with application startup enabled."""
     with TestClient(app) as test_client:
         yield test_client
-def client() -> Generator[TestClient, None, None]:
-    Base.metadata.drop_all(bind=engine)
-    Base.metadata.create_all(bind=engine)
-    with TestClient(app) as test_client:
-        yield test_client
-    Base.metadata.drop_all(bind=engine)
