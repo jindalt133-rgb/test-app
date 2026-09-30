@@ -1,6 +1,8 @@
 # library-catalog-service
 
-A REST API for managing a library book catalog. Library administrators can create, retrieve, update, delete, and search books.
+A RESTful FastAPI service for library administrators to manage a SQLite-backed book catalog.
+
+The approved application includes the `app/` source tree, pytest/HTTPX tests under `tests/`, and an isolated temporary SQLite database for tests.
 
 ## Technology Stack
 
