@@ -13,10 +13,10 @@ class BookService:
         self.repository = BookRepository(db)
 
     def create_book(self, payload: BookCreate) -> BookRead:
-        if self.repository.get_by_isbn(data.isbn) is not None:
+        if self.repository.get_by_isbn(payload.isbn) is not None:
             raise self.duplicate_isbn_error()
 
-        book = Book(**data.model_dump())
+        book = Book(**payload.model_dump())
 
         try:
             return self.repository.create(book)
@@ -40,12 +40,12 @@ class BookService:
     def update_book(self, book_id: int, payload: BookUpdate) -> BookRead:
         book = self.get(book_id)
 
-        existing = self.repository.get_by_isbn(data.isbn)
+        existing = self.repository.get_by_isbn(payload.isbn)
 
         if existing is not None and existing.id != book_id:
             raise self.duplicate_isbn_error()
 
-        for field, value in data.model_dump().items():
+        for field, value in payload.model_dump().items():
             setattr(book, field, value)
 
         try:
