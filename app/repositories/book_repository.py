@@ -1,7 +1,7 @@
-from sqlalchemy import or_, select
+from sqlalchemy import select
 from sqlalchemy.orm import Session
 
-from app.db.models import Book
+from app.models.book import Book
 
 
 class BookRepository:
@@ -14,7 +14,7 @@ class BookRepository:
         self.db.refresh(book)
         return book
 
-    def list_all(self) -> list[Book]:
+    def list(self) -> list[Book]:
         statement = select(Book).order_by(Book.id)
         return list(self.db.scalars(statement).all())
 
@@ -25,19 +25,7 @@ class BookRepository:
         statement = select(Book).where(Book.isbn == isbn)
         return self.db.scalar(statement)
 
-    def search(self, term: str) -> list[Book]:
-        pattern = f"%{term}%"
-        statement = (
-            select(Book)
-            .where(
-                or_(
-                    Book.title.ilike(pattern),
-                    Book.author.ilike(pattern),
-                )
-            )
-            .order_by(Book.id)
-        )
-        return list(self.db.scalars(statement).all())
+    
 
     def update(self, book: Book) -> Book:
         self.db.commit()
