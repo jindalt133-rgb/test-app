@@ -59,24 +59,17 @@ class BookService:
         self.repository.delete(book)
 
     @staticmethod
-    def not_found_error() -> AppError:
+    def _not_found_error(book_id: int) -> AppError:
         return AppError(
-            status=404,
+            status_code=status.HTTP_404_NOT_FOUND,
             code="BOOK_NOT_FOUND",
-            message="The requested book was not found.",
-            errors=[],
+            message=f"Book with id {book_id} was not found",
         )
 
     @staticmethod
-    def duplicate_isbn_error() -> AppError:
+    def _duplicate_isbn_error(isbn: str) -> AppError:
         return AppError(
-            status=409,
-            code="DUPLICATE_ISBN",
-            message="A book with this ISBN already exists.",
-            errors=[
-                {
-                    "field": "isbn",
-                    "message": "ISBN must be unique.",
-                }
-            ],
+            status_code=status.HTTP_409_CONFLICT,
+            code="ISBN_ALREADY_EXISTS",
+            message=f"A book with ISBN {isbn} already exists",
         )
