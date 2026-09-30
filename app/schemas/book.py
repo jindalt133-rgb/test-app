@@ -1,4 +1,3 @@
-from decimal import Decimal
 from typing import Annotated
 
 from pydantic import BaseModel, ConfigDict, Field, field_validator
@@ -19,33 +18,32 @@ BookText = Annotated[
 ]
 
 
-class BookInput(BaseModel):
-    title: BookText
-    author: BookText
-    isbn: Annotated[
-        str,
-        Field(min_length=1, max_length=64),
-    ]
-    category: Annotated[
-        str,
-        Field(min_length=1, max_length=120),
-    ]
-    price: Annotated[
-        Decimal,
-        Field(ge=0),
-    ]
-    quantity: Annotated[
-        int,
-        Field(ge=0),
-    ]
+class BookFields(BaseModel):
+    title: NonBlankString
+    author: NonBlankString
+    isbn: Annotated[str, Field(min_length=1, max_length=32)]
+    publication_year: StrictInt
+    genre: Annotated[str, Field(min_length=1, max_length=100)]
+    available: StrictBool
 
     @field_validator("title", "author", "isbn", "category")
     @classmethod
     def validate_text(cls, value: str) -> str:
-        return non_blank(value)
+        if not value.strip():
+            raise ValueError("Field must not be blank")
+        return value
 
 
-class BookResponse(BookInput):
+class BookCreate(BookFields):
+    pass
+
+
+class BookUpdate(BookFields):
+    pass
+
+
+class BookRead(BookFields):
     model_config = ConfigDict(from_attributes=True)
 
     id: int
+    model_config = ConfigDict(from_attributes=True)
