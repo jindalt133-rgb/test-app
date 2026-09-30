@@ -4,10 +4,7 @@ from dataclasses import dataclass
 
 @dataclass(frozen=True)
 class Settings:
-    database_url: str = "sqlite:///./library.db"
+    database_url: str = os.getenv("DATABASE_URL", "sqlite:///./library_catalog.db")
 
 
-def get_settings() -> Settings:
-    return Settings(
-        database_url=os.getenv("DATABASE_URL", "sqlite:///./library.db")
-    )
+settings = Settings()
