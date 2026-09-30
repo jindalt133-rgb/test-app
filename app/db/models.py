@@ -1,7 +1,3 @@
-"""SQLAlchemy database models."""
-
-from __future__ import annotations
-
 from decimal import Decimal
 
 from sqlalchemy import Integer, Numeric, String
