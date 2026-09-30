@@ -1,41 +1,77 @@
-"""Application exceptions and consistent error handlers."""
-
-from __future__ import annotations
-
-from typing import Any
+from collections.abc import Iterable
 
 from fastapi import Request
 from fastapi.exceptions import RequestValidationError
 from fastapi.responses import JSONResponse
 
 
-class ApplicationError(Exception):
-    """Base exception for expected application errors."""
-
-    def __init__(self, status_code: int, code: str, message: str, errors: list[dict[str, Any]] | None = None) -> None:
-        super().__init__(message)
-        self.status_code = status_code
+class AppError(Exception):
+    def __init__(
+        self,
+        status: int,
+        code: str,
+        message: str,
+        errors: list[dict[str, str]] | None = None,
+    ) -> None:
+        self.status = status
         self.code = code
         self.message = message
         self.errors = errors or []
+        super().__init__(message)
 
 
-def error_body(status: int, code: str, message: str, errors: list[dict[str, Any]] | None = None) -> dict[str, Any]:
-    return {"status": status, "code": code, "message": message, "errors": errors or []}
+def error_payload(
+    status: int,
+    code: str,
+    message: str,
+    errors: Iterable[dict[str, str]] = (),
+) -> dict:
+    return {
+        "status": status,
+        "code": code,
+        "message": message,
+        "errors": list(errors),
+    }
 
 
-async def application_error_handler(_request: Request, exc: ApplicationError) -> JSONResponse:
-    return JSONResponse(status_code=exc.status_code, content=error_body(exc.status_code, exc.code, exc.message, exc.errors))
+async def app_error_handler(
+    _: Request,
+    exc: AppError,
+) -> JSONResponse:
+    return JSONResponse(
+        status_code=exc.status,
+        content=error_payload(
+            exc.status,
+            exc.code,
+            exc.message,
+            exc.errors,
+        ),
+    )
 
 
-async def validation_error_handler(_request: Request, exc: RequestValidationError) -> JSONResponse:
-    errors = []
+async def validation_error_handler(
+    _: Request,
+    exc: RequestValidationError,
+) -> JSONResponse:
+    errors: list[dict[str, str]] = []
+
     for item in exc.errors():
         location = item.get("loc", ())
-        field = ".".join(str(value) for value in location if value != "body")
-        errors.append({"field": field or "request", "message": str(item.get("msg", "Invalid value"))})
-    return JSONResponse(status_code=422, content=error_body(422, "VALIDATION_ERROR", "Request validation failed.", errors))
+        field = str(location[-1]) if location else "request"
 
+        errors.append(
+            {
+                "field": field,
+                "message": item.get("msg", "Invalid value."),
+            }
+        )
 
-async def unexpected_error_handler(_request: Request, _exc: Exception) -> JSONResponse:
-    return JSONResponse(status_code=500, content=error_body(500, "INTERNAL_SERVER_ERROR", "An unexpected server error occurred."))
+    return JSONResponse(
+        status_code=422,
+        content=error_payload(
+            422,
+            "VALIDATION_ERROR",
+            "Request validation failed.",
+            errors,
+        ),
+    )
