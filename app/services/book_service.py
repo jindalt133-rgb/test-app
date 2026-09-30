@@ -12,7 +12,7 @@ class BookService:
     def __init__(self, db: Session) -> None:
         self.repository = BookRepository(db)
 
-    def create(self, data: BookInput) -> Book:
+    def create_book(self, payload: BookCreate) -> BookRead:
         if self.repository.get_by_isbn(data.isbn) is not None:
             raise self.duplicate_isbn_error()
 
@@ -24,13 +24,12 @@ class BookService:
             self.repository.db.rollback()
             raise self.duplicate_isbn_error() from None
 
-    def list_all(self) -> list[Book]:
-        return self.repository.list_all()
+    def list_books(self) -> list[BookRead]:
+        return [BookRead.model_validate(book) for book in self.repository.list()]
 
-    def search(self, term: str) -> list[Book]:
-        return self.repository.search(term.strip())
+    
 
-    def get(self, book_id: int) -> Book:
+    def get_book(self, book_id: int) -> BookRead:
         book = self.repository.get_by_id(book_id)
 
         if book is None:
@@ -38,7 +37,7 @@ class BookService:
 
         return book
 
-    def update(self, book_id: int, data: BookInput) -> Book:
+    def update_book(self, book_id: int, payload: BookUpdate) -> BookRead:
         book = self.get(book_id)
 
         existing = self.repository.get_by_isbn(data.isbn)
@@ -55,7 +54,7 @@ class BookService:
             self.repository.db.rollback()
             raise self.duplicate_isbn_error() from None
 
-    def delete(self, book_id: int) -> None:
+    def delete_book(self, book_id: int) -> None:
         book = self.get(book_id)
         self.repository.delete(book)
 
