@@ -11,14 +11,36 @@ from app.db.database import Base
 
 
 class Book(Base):
-    """Book catalog record."""
-
     __tablename__ = "books"
 
-    id: Mapped[int] = mapped_column(Integer, primary_key=True, index=True)
-    title: Mapped[str] = mapped_column(String(255), nullable=False)
-    author: Mapped[str] = mapped_column(String(255), nullable=False)
-    isbn: Mapped[str] = mapped_column(String(50), nullable=False, unique=True, index=True)
-    category: Mapped[str] = mapped_column(String(100), nullable=False)
-    price: Mapped[Decimal] = mapped_column(Numeric(10, 2), nullable=False)
-    quantity: Mapped[int] = mapped_column(Integer, nullable=False)
+    id: Mapped[int] = mapped_column(
+        Integer,
+        primary_key=True,
+        index=True,
+    )
+    title: Mapped[str] = mapped_column(
+        String(255),
+        nullable=False,
+    )
+    author: Mapped[str] = mapped_column(
+        String(255),
+        nullable=False,
+    )
+    isbn: Mapped[str] = mapped_column(
+        String(64),
+        nullable=False,
+        unique=True,
+        index=True,
+    )
+    category: Mapped[str] = mapped_column(
+        String(120),
+        nullable=False,
+    )
+    price: Mapped[Decimal] = mapped_column(
+        Numeric(12, 2),
+        nullable=False,
+    )
+    quantity: Mapped[int] = mapped_column(
+        Integer,
+        nullable=False,
+    )
