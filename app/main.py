@@ -1,8 +1,6 @@
 from contextlib import asynccontextmanager
 from collections.abc import AsyncIterator
-
 from fastapi import FastAPI
-
 from app.database import create_tables
 from app.routes import employees, health, leave_requests
 
