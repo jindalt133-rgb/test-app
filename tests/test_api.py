@@ -102,7 +102,9 @@ def test_get_task_returns_task_by_id(client: TestClient):
     }
 
 
-def test_get_missing_task_returns_structured_not_found_error(client: TestClient):
+def test_get_missing_task_returns_structured_not_found_error(
+    client: TestClient,
+):
     response = client.get("/tasks/999")
 
     assert response.status_code == 404
@@ -114,7 +116,9 @@ def test_get_missing_task_returns_structured_not_found_error(client: TestClient)
     }
 
 
-def test_delete_task_returns_no_content_and_removes_task(client: TestClient):
+def test_delete_task_returns_no_content_and_removes_task(
+    client: TestClient,
+):
     created = client.post("/tasks", json={"title": "Temporary task"})
     task_id = created.json()["id"]
 
@@ -126,7 +130,9 @@ def test_delete_task_returns_no_content_and_removes_task(client: TestClient):
     assert client.get("/tasks").json() == []
 
 
-def test_delete_missing_task_returns_structured_not_found_error(client: TestClient):
+def test_delete_missing_task_returns_structured_not_found_error(
+    client: TestClient,
+):
     response = client.delete("/tasks/999")
 
     assert response.status_code == 404
@@ -176,8 +182,12 @@ def test_blank_title_returns_structured_validation_error(
     ]
 
 
-def test_invalid_title_type_returns_structured_validation_error(client: TestClient):
+def test_invalid_title_type_returns_structured_validation_error(
+    client: TestClient,
+):
     response = client.post("/tasks", json={"title": 123})
+
+    assert response.status_code == 422
     body = response.json()
 
     assert response.status_code == 422
@@ -187,8 +197,15 @@ def test_invalid_title_type_returns_structured_validation_error(client: TestClie
     assert body["error"]["details"][0]["type"] == "string_type"
 
 
-def test_invalid_completed_value_returns_structured_validation_error(client: TestClient):
-    response = client.post("/tasks", json={"title": "Valid title", "completed": "not-a-boolean"})
+def test_invalid_completed_value_returns_structured_validation_error(
+    client: TestClient,
+):
+    response = client.post(
+        "/tasks",
+        json={"title": "Valid title", "completed": "not-a-boolean"},
+    )
+
+    assert response.status_code == 422
     body = response.json()
 
     assert response.status_code == 422
@@ -198,8 +215,12 @@ def test_invalid_completed_value_returns_structured_validation_error(client: Tes
     assert body["error"]["details"][0]["type"] == "bool_parsing"
 
 
-def test_invalid_task_identifier_returns_structured_validation_error(client: TestClient):
+def test_invalid_task_identifier_returns_structured_validation_error(
+    client: TestClient,
+):
     response = client.get("/tasks/not-an-integer")
+
+    assert response.status_code == 422
     body = response.json()
 
     assert response.status_code == 422
