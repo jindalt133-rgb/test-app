@@ -1,19 +1,94 @@
 # Employee Leave Management Service
 
-A REST API for managing employees and employee leave requests.
+A REST API for creating employees and managing employee leave requests.
 
-## Application overview
+## Technology Stack
 
-The Employee Leave Management Service provides endpoints to:
+- Python 3.11+
+- FastAPI
+- SQLAlchemy
+- Pydantic
+- SQLite
+- pytest
+- httpx
 
-- Create and retrieve employees.
-- Submit leave requests for active employees.
-- Retrieve all leave requests or requests for one employee.
-- Approve and reject pending requests.
-- Delete pending requests.
-- Check application health.
+## Application Overview
 
-The service uses a layered architecture with FastAPI routes, service-layer business rules, repository-layer persistence, Pydantic schemas, SQLAlchemy models, and centralized error handling.
+The service supports employee creation and retrieval, unique email validation, leave request submission and retrieval, employee-specific leave retrieval, leave approval and rejection, deletion of pending leave requests, and health checks.
+
+## Installation
+
+```bash
+python3.11 -m venv .venv
+source .venv/bin/activate
+pip install -r requirements.txt
+```
+
+## Configuration
+
+Copy `.env.example` to `.env`. `DATABASE_URL` defaults to `sqlite:///./employee_leave.db`.
+
+## Running the Application
+
+```bash
+uvicorn app.main:app --reload
+```
+
+The API is available at `http://127.0.0.1:8000`. Swagger UI is available at `/docs` and OpenAPI JSON at `/openapi.json`.
+
+## API Endpoints
+
+| Method | Endpoint | Description |
+|---|---|---|
+| GET | `/health` | Returns service health |
+| POST | `/employees` | Create an employee |
+| GET | `/employees` | Retrieve all employees |
+| GET | `/employees/{employee_id}` | Retrieve an employee by ID |
+| GET | `/employees/{employee_id}/leave-requests` | Retrieve an employee's leave requests |
+| POST | `/leave-requests` | Submit a leave request |
+| GET | `/leave-requests` | Retrieve all leave requests |
+| POST | `/leave-requests/{leave_request_id}/approve` | Approve a pending request |
+| POST | `/leave-requests/{leave_request_id}/reject` | Reject a pending request |
+| DELETE | `/leave-requests/{leave_request_id}` | Delete a pending request |
+
+## Business Rules
+
+- Employee email addresses must be unique.
+- Employee `name`, `email`, and `department` reject blank values.
+- Leave requests require an existing active employee.
+- Supported leave types are `ANNUAL`, `SICK`, and `PERSONAL`.
+- `start_date` cannot be later than `end_date`.
+- New leave requests have `PENDING` status.
+- Only pending leave requests can be approved, rejected, or deleted.
+
+## Error Responses
+
+The application uses `AppError` exceptions for service-level errors. No custom FastAPI exception handler is registered. With server exception propagation disabled, service-level `AppError` paths produce generic HTTP 500 responses. FastAPI and Pydantic validation failures use the default HTTP 422 response containing a `detail` field.
+
+## Testing
+
+Run the pytest suite with:
+
+```bash
+pytest
+```
+
+Tests use an isolated temporary SQLite database and FastAPI's test client. The suite covers health checks, employee and leave request operations, validation, missing resources, status transitions, and edge cases.
+
+## Assumptions
+
+- Database tables are created automatically at application startup.
+- Leave dates are calendar dates without time zones.
+- Leave request reasons are optional.
+- No authentication, authorization, pagination, or deployment requirements were specified.
+
+## Application Profile
+
+- Service owner: Not Specified
+- Deployment platform: Not Specified
+- Cloud provider: Not Specified
+- JIRA board: Not Specified
+- On-call rotation: Not Specified
 
 ## Technology stack
 
