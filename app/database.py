@@ -1,75 +1,78 @@
+from __future__
+
+import os
 import sqlite3
 from pathlib import Path
 from typing import Any
 
 
-SCHEMA = """
-CREATE TABLE IF NOT EXISTS tasks (
-    id INTEGER PRIMARY KEY AUTOINCREMENT,
-    title TEXT NOT NULL,
-    completed INTEGER NOT NULL DEFAULT 0 CHECK (completed IN (0, 1))
-);
-"""
+DEFAULT_DATABASE_PATH = "tasks.db"
 
 
-def initialize_database(database_path: str) -> None:
-    if database_path != ":memory:":
-        Path(database_path).parent.mkdir(parents=True, exist_ok=True)
+def database_path() -> str:
+    """Return the configured SQLite database path."""
+    return os.getenv("TASK_DATABASE_PATH", DEFAULT_DATABASE_PATH)
 
-    with sqlite3.connect(database_path) as connection:
-        connection.execute(SCHEMA)
+
+def connect(path: str | Path | None = None) -> sqlite3.Connection:
+    """Open a SQLite connection with row-name access enabled."""
+    connection = sqlite3.connect(str(path or database_path()))
+    connection.row_factory = sqlite3.Row
+    return connection
+
+
+def initialize_database(path: str | Path | None = None) -> None:
+    """Create the tasks table if it does not already exist."""
+    with connect(path) as connection:
+        connection.execute(
+            """
+            CREATE TABLE IF NOT EXISTS tasks (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                title TEXT NOT NULL,
+                completed INTEGER NOT NULL DEFAULT 0
+            )
+            """
+        )
         connection.commit()
 
 
-def create_task(database_path: str, title: str, completed: bool) -> dict[str, Any]:
-    with sqlite3.connect(database_path) as connection:
+def create_task(
+    title: str,
+    completed: bool = False,
+    path: str | Path | None = None,
+) -> dict[str, Any]:
+    with connect(path) as connection:
         cursor = connection.execute(
-            """
-            INSERT INTO tasks (title, completed)
-            VALUES (?, ?)
-            """,
+            "INSERT INTO tasks (title, completed) VALUES (?, ?)",
             (title, int(completed)),
         )
-        task_id = cursor.lastrowid
         connection.commit()
+        task_id = cursor.lastrowid
 
-    return get_task(database_path, task_id)
+    return get_task(task_id, path)
 
 
-def list_tasks(database_path: str) -> list[dict[str, Any]]:
-    with sqlite3.connect(database_path) as connection:
-        connection.row_factory = sqlite3.Row
+def get_tasks(path: str | Path | None = None) -> list[dict[str, Any]]:
+    with connect(path) as connection:
         rows = connection.execute(
-            """
-            SELECT id, title, completed
-            FROM tasks
-            ORDER BY id
-            """
+            "SELECT id, title, completed FROM tasks ORDER BY id"
         ).fetchall()
 
     return [_row_to_task(row) for row in rows]
 
 
-def get_task(database_path: str, task_id: int) -> dict[str, Any] | None:
-    with sqlite3.connect(database_path) as connection:
-        connection.row_factory = sqlite3.Row
+def get_task(task_id: int, path: str | Path | None = None) -> dict[str, Any] | None:
+    with connect(path) as connection:
         row = connection.execute(
-            """
-            SELECT id, title, completed
-            FROM tasks
-            WHERE id = ?
-            """,
+            "SELECT id, title, completed FROM tasks WHERE id = ?",
             (task_id,),
         ).fetchone()
 
-    if row is None:
-        return None
-
-    return _row_to_task(row)
+    return _row_to_task(row) if row is not None else None
 
 
-def delete_task(database_path: str, task_id: int) -> bool:
-    with sqlite3.connect(database_path) as connection:
+def delete_task(task_id: int, path: str | Path | None = None) -> bool:
+    with connect(path) as connection:
         cursor = connection.execute(
             "DELETE FROM tasks WHERE id = ?",
             (task_id,),
