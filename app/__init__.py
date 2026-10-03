@@ -1,4 +1,4 @@
-"""Repository layer."""
+"""Employee Leave Management Service application package."""
 ++ b/app/repositories/employee_repository.py
 """Pydantic API schemas."""
 ++ b/app/schemas/employee.py
