@@ -1,4 +1,13 @@
+import os
+import shutil
+import tempfile
 from collections.abc import Generator
+
+# Configure an isolated database before importing app.database, because the
+# approved application creates its SQLAlchemy engine at import time.
+_TEST_DATABASE_DIRECTORY = tempfile.mkdtemp(prefix="employee-leave-tests-")
+_TEST_DATABASE_PATH = os.path.join(_TEST_DATABASE_DIRECTORY, "test.db")
+os.environ["DATABASE_URL"] = f"sqlite:///{_TEST_DATABASE_PATH}"
 
 import pytest
 from fastapi.testclient import TestClient
