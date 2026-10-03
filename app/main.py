@@ -42,7 +42,7 @@ def create_app(database_path: str | Path | None = None) -> FastAPI:
         else:
             content = {"error": {"code": "HTTP_ERROR", "message": str(exc.detail)}}
 
-        return JSONResponse(status_code=exc.status_code, content=content)
+    @application.post("/tasks", response_model=TaskResponse, status_code=201)
 
     @application.get("/health", response_model=HealthResponse)
     def health() -> HealthResponse:
