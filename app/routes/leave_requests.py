@@ -2,79 +2,80 @@ from fastapi import APIRouter, Depends, Response, status
 from sqlalchemy.orm import Session
 
 from app.database import get_db
-from app.models import LeaveStatus
-from app.schemas.leave_request import (
-    LeaveRequestCreate,
-    LeaveRequestResponse,
-)
-from app.services import leave_service
+from app.repositories.employee_repository import EmployeeRepository
+from app.repositories.leave_request_repository import LeaveRequestRepository
+from app.schemas.leave_request import LeaveRequestCreate, LeaveRequestResponse
+from app.services.leave_request_service import LeaveRequestService
 
-router = APIRouter(prefix="/leave-requests", tags=["leave requests"])
+router = APIRouter(tags=["leave requests"])
+
+
+def get_leave_request_service(db: Session = Depends(get_db)) -> LeaveRequestService:
+    return LeaveRequestService(
+        repository=LeaveRequestRepository(db),
+        employee_repository=EmployeeRepository(db),
+    )
 
 
 @router.post(
-    "",
+    "/leave-requests",
     response_model=LeaveRequestResponse,
     status_code=status.HTTP_201_CREATED,
 )
 def create_leave_request(
-    payload: LeaveRequestCreate,
-    db: Session = Depends(get_db),
+    data: LeaveRequestCreate,
+    service: LeaveRequestService = Depends(get_leave_request_service),
 ) -> LeaveRequestResponse:
-    return leave_service.create_leave_request(
-        db=db,
-        employee_id=payload.employee_id,
-        leave_type=payload.leave_type,
-        start_date=payload.start_date,
-        end_date=payload.end_date,
-        reason=payload.reason,
-    )
+    return service.create(data)
 
 
-@router.get("", response_model=list[LeaveRequestResponse])
+@router.get("/leave-requests", response_model=list[LeaveRequestResponse])
 def get_leave_requests(
-    db: Session = Depends(get_db),
+    service: LeaveRequestService = Depends(get_leave_request_service),
 ) -> list[LeaveRequestResponse]:
-    return leave_service.get_all_leave_requests(db)
+    return service.get_all()
+
+
+@router.get(
+    "/employees/{employee_id}/leave-requests",
+    response_model=list[LeaveRequestResponse],
+)
+def get_employee_leave_requests(
+    employee_id: int,
+    service: LeaveRequestService = Depends(get_leave_request_service),
+) -> list[LeaveRequestResponse]:
+    return service.get_by_employee_id(employee_id)
 
 
 @router.post(
-    "/{leave_request_id}/approve",
+    "/leave-requests/{leave_request_id}/approve",
     response_model=LeaveRequestResponse,
 )
 def approve_leave_request(
     leave_request_id: int,
-    db: Session = Depends(get_db),
+    service: LeaveRequestService = Depends(get_leave_request_service),
 ) -> LeaveRequestResponse:
-    return leave_service.transition_leave_request(
-        db,
-        leave_request_id,
-        LeaveStatus.APPROVED,
-    )
+    return service.approve(leave_request_id)
 
 
 @router.post(
-    "/{leave_request_id}/reject",
+    "/leave-requests/{leave_request_id}/reject",
     response_model=LeaveRequestResponse,
 )
 def reject_leave_request(
     leave_request_id: int,
-    db: Session = Depends(get_db),
+    service: LeaveRequestService = Depends(get_leave_request_service),
 ) -> LeaveRequestResponse:
-    return leave_service.transition_leave_request(
-        db,
-        leave_request_id,
-        LeaveStatus.REJECTED,
-    )
+    return service.reject(leave_request_id)
 
 
 @router.delete(
-    "/{leave_request_id}",
+    "/leave-requests/{leave_request_id}",
     status_code=status.HTTP_204_NO_CONTENT,
 )
 def delete_leave_request(
     leave_request_id: int,
-    db: Session = Depends(get_db),
+    service: LeaveRequestService = Depends(get_leave_request_service),
 ) -> Response:
-    leave_service.delete_leave_request(db, leave_request_id)
+    service.delete(leave_request_id)
     return Response(status_code=status.HTTP_204_NO_CONTENT)
