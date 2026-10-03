@@ -1,3 +1,95 @@
+from __future__ import annotations
+
+from pathlib import Path
+from typing import Any
+
+from fastapi import FastAPI, HTTPException, Request
+from fastapi.exceptions import RequestValidationError
+from fastapi.responses import JSONResponse
+
+from app import database
+from app.schemas import HealthResponse, TaskCreate, TaskResponse
+
+
+def create_app(database_path: str | Path | None = None) -> FastAPI:
+    application = FastAPI(title="task-management-service")
+    application.state.database_path = str(database_path) if database_path else None
+    database.initialize_database(application.state.database_path)
+
+    @application.exception_handler(RequestValidationError)
+    async def validation_exception_handler(
+        request: Request,
+        exc: RequestValidationError,
+    ) -> JSONResponse:
+        return JSONResponse(
+            status_code=422,
+            content={
+                "error": {
+                    "code": "VALIDATION_ERROR",
+                    "message": "Invalid request",
+                    "details": _json_safe_errors(exc.errors()),
+                }
+            },
+        )
+
+    @application.exception_handler(HTTPException)
+    async def http_exception_handler(
+        request: Request,
+        exc: HTTPException,
+    ) -> JSONResponse:
+        if isinstance(exc.detail, dict):
+            content: Any = {"error": exc.detail}
+        else:
+            content = {"error": {"code": "HTTP_ERROR", "message": str(exc.detail)}}
+
+        return JSONResponse(status_code=exc.status_code, content=content)
+
+    @application.get("/health", response_model=HealthResponse)
+    def health() -> HealthResponse:
+        return HealthResponse(status="ok")
+
+    @application.post("/tasks", response_model=TaskResponse, status_code=201)
+    def create_task(task: TaskCreate) -> dict[str, Any]:
+        return database.create_task(title=task.title, completed=task.completed, path=application.state.database_path)
+
+    @application.get("/tasks", response_model=list[TaskResponse])
+    def get_tasks() -> list[dict[str, Any]]:
+        return database.get_tasks(application.state.database_path)
+
+    @application.get("/tasks/{task_id}", response_model=TaskResponse)
+    def get_task(task_id: int) -> dict[str, Any]:
+        task = database.get_task(task_id, application.state.database_path)
+        if task is None:
+            raise _task_not_found()
+        return task
+
+    @application.delete("/tasks/{task_id}", status_code=204)
+    def delete_task(task_id: int) -> None:
+        if not database.delete_task(task_id, application.state.database_path):
+            raise _task_not_found()
+
+    return application
+
+
+def _task_not_found() -> HTTPException:
+    return HTTPException(status_code=404, detail={"code": "TASK_NOT_FOUND", "message": "Task not found"})
+
+
+def _json_safe_errors(errors: list[dict[str, Any]]) -> list[dict[str, Any]]:
+    return [_json_safe_value(error) for error in errors]
+
+
+def _json_safe_value(value: Any) -> Any:
+    if isinstance(value, dict):
+        return {str(key): _json_safe_value(item) for key, item in value.items()}
+    if isinstance(value, (list, tuple)):
+        return [_json_safe_value(item) for item in value]
+    if isinstance(value, (str, int, float, bool)) or value is None:
+        return value
+    return str(value)
+
+
+app = create_app()
 import os
 from contextlib import asynccontextmanager
 from typing import Any
