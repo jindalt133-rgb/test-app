@@ -1,16 +1,18 @@
 from collections.abc import Generator
 
+from pydantic_settings import BaseSettings, SettingsConfigDict
 from sqlalchemy import create_engine
 from sqlalchemy.orm import DeclarativeBase, Session, sessionmaker
-
-from app.config import get_settings
-
 
 class Base(DeclarativeBase):
     pass
 
+class Settings(BaseSettings):
+    database_url: str = "sqlite:///./employee_leave.db"
+    model_config = SettingsConfigDict(env_file=".env", env_prefix="", extra="ignore")
 
-database_url = get_settings().database_url
+settings = Settings()
+database_url = settings.database_url
 
 connect_args = {}
 if database_url.startswith("sqlite"):
