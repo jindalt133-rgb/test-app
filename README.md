@@ -1,73 +1,95 @@
 # task-management-service
 
-## Overview
-
 A minimal Task Management REST API built with Python 3.11+, FastAPI, Pydantic, and SQLite.
 
-The API supports creating, listing, retrieving, and deleting tasks. Each task has an ID, a required non-blank title, and a completed status that defaults to `false`.
+## Overview
 
-## Application structure
+The service supports:
+
+- Creating tasks
+- Retrieving all tasks
+- Retrieving a task by ID
+- Deleting tasks
+- Checking service health
+
+Each task contains:
+
+- `id`: integer identifier
+- `title`: required, non-blank string
+- `completed`: boolean that defaults to `false`
+
+SQLite is used for persistence. The database path defaults to `tasks.db` and can be changed with the `TASK_DB_PATH` environment variable.
+
+## Project structure
 
 ```text
-app/
-├── __init__.py
-├── api.py
-├── database.py
-├── main.py
-├── models.py
-└── repository.py
-
-tests/
-└── test_tasks.py
-pyproject.toml
+task-management-service/
+├── app/
+│   ├── __init__.py
+│   ├── database.py
+│   ├── main.py
+│   └── schemas.py
+├── tests/
+│   └── test_tasks.py
+├── .gitignore
+├── pyproject.toml
+└── README.md
 ```
 
-The test file is planned at `tests/test_tasks.py` and is generated separately.
+The supplied test suite is present at `tests/test_tasks.py`. Tests use `pytest`, FastAPI's `TestClient`, and a separate SQLite database created in pytest's temporary directory for isolation.
 
 ## Installation
+
+Python 3.11 or newer is required.
 
 Create and activate a virtual environment:
 
 ```bash
-python3.11 -m venv .venv
+python -m venv .venv
 source .venv/bin/activate
 ```
 
-Install application and test dependencies:
+On Windows:
 
-```bash
-pip install -e ".[test]"
+```powershell
+python -m venv .venv
+.venv\Scripts\activate
 ```
 
-## Configuration
-
-The SQLite database path is configured with the `TASK_DB_PATH` environment variable.
-
-If it is not set, the application uses `tasks.db` in the current working directory.
-
-Example:
+Install the dependencies:
 
 ```bash
-export TASK_DB_PATH=tasks.db
+pip install -e .
 ```
 
-## Run command
-
-Start the development server with:
+## Run the application
 
 ```bash
 uvicorn app.main:app --reload
 ```
 
-The API will be available at:
+The API is available at:
 
 ```text
 http://127.0.0.1:8000
 ```
 
+To use a different SQLite database:
+
+```bash
+TASK_DB_PATH=./data/tasks.db uvicorn app.main:app --reload
+```
+
+On Windows PowerShell:
+
+```powershell
+$env:TASK_DB_PATH="./data/tasks.db"
+uvicorn app.main:app --reload
+```
+
 ## API endpoints
 
-### Health
+### Health check
 
 ```http
 GET /health
@@ -92,12 +114,11 @@ Request:
 
 ```json
 {
-  "title": "Write documentation",
-  "completed": false
+  "title": "Write documentation"
 }
 ```
 
-The `completed` field is optional and defaults to `false`.
+`completed` is optional and defaults to `false`.
 
 Response: `201 Created`
 
@@ -135,19 +156,11 @@ GET /tasks/{task_id}
 
 Response: `200 OK`
 
-```json
-{
-  "id": 1,
-  "title": "Write documentation",
-  "completed": false
-}
-```
-
-If the task does not exist, the response is `404 Not Found`:
+A missing task returns `404 Not Found`:
 
 ```json
 {
-  "detail": {
+  "error": {
     "code": "TASK_NOT_FOUND",
     "message": "Task not found"
   }
@@ -160,50 +173,50 @@ If the task does not exist, the response is `404 Not Found`:
 DELETE /tasks/{task_id}
 ```
 
-Response: `204 No Content`
+A successful deletion returns `204 No Content`.
 
-If the task does not exist, the response is `404 Not Found` with the same structured error shown above.
-
-## Validation errors
-
-A blank title is invalid. Validation errors return `422 Unprocessable Entity`:
+A missing task returns the same structured `404 Not Found` response:
 
 ```json
 {
-  "code": "VALIDATION_ERROR",
-  "detail": [
-    {
-      "type": "value_error",
-      "loc": [
-        "body",
-        "title"
-      ],
-      "msg": "Value error, title must not be blank",
-      "input": "   "
-    }
-  ]
+  "error": {
+    "code": "TASK_NOT_FOUND",
+    "message": "Task not found"
+  }
 }
 ```
 
+## Validation errors
+
+A blank title or otherwise invalid request returns `422 Unprocessable Entity`:
+
+```json
+{
+  "error": {
+    "code": "VALIDATION_ERROR",
+    "message": "Invalid input",
+    "details": []
+  }
+}
+```
+
+The `details` array contains the validation errors reported by Pydantic.
+
 ## Testing
 
-Tests use `pytest` and FastAPI's `TestClient`, with `httpx` declared as a compatible client dependency.
+The supplied test suite is `tests/test_tasks.py` and uses pytest.
 
-Run the test suite with:
+Install the project dependencies, including test dependencies, with:
+
+```bash
+pip install -e ".[test]"
+```
+
+Run all tests:
 
 ```bash
 pytest
 ```
 
-Tests use an isolated SQLite database created under pytest's `tmp_path` fixture. The application factory accepts an explicit database path so tests do not use the development database.
-
-The planned test coverage includes:
-
-- Health endpoint
-- Task creation
-- Retrieving all tasks
-- Retrieving a task by ID
-- Deleting a task
-- Blank title validation
-- Missing task handling
+Tests create and use an isolated SQLite database under pytest's `tmp_path` fixture. The application factory receives that temporary database path, so tests do not use the development database.
 
