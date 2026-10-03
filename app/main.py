@@ -1,12 +1,12 @@
 from contextlib import asynccontextmanager
 
 from fastapi import FastAPI
-from fastapi.exceptions import RequestValidationError
 
 from app.database import Base, engine
 from app.errors import AppError, app_error_handler, validation_error_handler
 from app.models import Employee, LeaveRequest
 from app.routes import employees, health, leave_requests
+from fastapi.exceptions import RequestValidationError
 
 
 @asynccontextmanager
