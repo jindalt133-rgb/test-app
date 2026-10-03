@@ -285,9 +285,7 @@ Tests use an isolated in-memory SQLite database, preventing test data from affec
 
 API tests exercise the FastAPI application through HTTPX and pytest. Each test uses an isolated in-memory SQLite database, and database state is reset between tests. This verifies routing, validation, service rules, repository behavior, persistence, and structured error responses together.
 
-## Application overview
 
-`employee-leave-management-service` is a REST API for managing employees and employee leave requests.
 
 The service supports:
 
