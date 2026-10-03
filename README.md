@@ -203,31 +203,21 @@ pytest tests/test_api.py
 
 Tests use a separate temporary SQLite database for each test or test application instance, so they do not use the development database.
 
-### FILE: pyproject.toml
-[build-system]
-requires = ["setuptools>=68"]
-build-backend = "setuptools.build_meta"
+## Testing
 
-[project]
-name = "task-management-service"
-version = "0.1.0"
-description = "A minimal Task Management REST API"
-requires-python = ">=3.11"
-dependencies = [
-    "fastapi>=0.115,<1.0",
-    "pydantic>=2.7,<3.0",
-    "uvicorn[standard]>=0.30,<1.0",
-]
+The test suite is provided in `tests/test_api.py`. It uses pytest and FastAPI's `TestClient`.
 
-[project.optional-dependencies]
-test = [
-    "pytest>=8.0,<9.0",
-    "httpx>=0.27,<1.0",
-]
+Run all tests:
 
-[tool.pytest.ini_options]
-testpaths = ["tests"]
+```bash
+pytest
+```
 
-[tool.setuptools.packages.find]
-include = ["app*"]
+Run the API test module directly:
+
+```bash
+pytest tests/test_api.py
+```
+
+Tests use a separate temporary SQLite database for each test or test application instance, so they do not use the development database.
 
