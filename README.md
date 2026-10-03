@@ -203,21 +203,3 @@ pytest tests/test_api.py
 
 Tests use a separate temporary SQLite database for each test or test application instance, so they do not use the development database.
 
-## Testing
-
-The test suite is provided in `tests/test_api.py`. It uses pytest and FastAPI's `TestClient`.
-
-Run all tests:
-
-```bash
-pytest
-```
-
-Run the API test module directly:
-
-```bash
-pytest tests/test_api.py
-```
-
-Tests use a separate temporary SQLite database for each test or test application instance, so they do not use the development database.
-
