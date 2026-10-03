@@ -1,1 +1,1 @@
-"""Task management service application package."""
+"""Task Management Service application package."""
