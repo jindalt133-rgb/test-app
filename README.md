@@ -1,6 +1,8 @@
 # Employee Leave Management Service
 
-## Overview
+A REST API for managing employees and employee leave requests.
+
+## Application overview
 
 `employee-leave-management-service` is a REST API for managing employees and employee leave requests.
 
