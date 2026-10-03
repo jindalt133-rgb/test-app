@@ -8,10 +8,9 @@ class TaskCreate(BaseModel):
     @field_validator("title")
     @classmethod
     def validate_title(cls, value: str) -> str:
-        stripped_value = value.strip()
-        if not stripped_value:
+        if not value.strip():
             raise ValueError("title must not be blank")
-        return stripped_value
+        return value.strip()
 
 
 class TaskResponse(BaseModel):
@@ -20,7 +19,3 @@ class TaskResponse(BaseModel):
     id: int
     title: str
     completed: bool
-
-
-class HealthResponse(BaseModel):
-    status: str
