@@ -9,120 +9,48 @@ A REST API for managing employees and employee leave requests.
 - SQLAlchemy
 - Pydantic
 - SQLite
-- pytest
-- httpx
-
-## Application Overview
-
-The service supports employee creation and retrieval, unique email validation, leave request submission and retrieval, employee-specific leave retrieval, leave approval and rejection, deletion of pending leave requests, and health checks.
-
-## Installation
-
-```bash
-python3.11 -m venv .venv
-source .venv/bin/activate
-pip install -r requirements.txt
-```
-
-## Configuration
-
-Copy `.env.example` to `.env`. `DATABASE_URL` defaults to `sqlite:///./employee_leave.db`.
-
-## Running the Application
-
-```bash
-uvicorn app.main:app --reload
-```
-
-The API is available at `http://127.0.0.1:8000`. Swagger UI is available at `/docs` and OpenAPI JSON at `/openapi.json`.
-
-## API Endpoints
-
-| Method | Endpoint | Description |
-|---|---|---|
-| GET | `/health` | Returns service health |
-| POST | `/employees` | Create an employee |
-| GET | `/employees` | Retrieve all employees |
-| GET | `/employees/{employee_id}` | Retrieve an employee by ID |
-| GET | `/employees/{employee_id}/leave-requests` | Retrieve an employee's leave requests |
-| POST | `/leave-requests` | Submit a leave request |
-| GET | `/leave-requests` | Retrieve all leave requests |
-| POST | `/leave-requests/{leave_request_id}/approve` | Approve a pending request |
-| POST | `/leave-requests/{leave_request_id}/reject` | Reject a pending request |
-| DELETE | `/leave-requests/{leave_request_id}` | Delete a pending request |
-
-## Business Rules
-
-- Employee email addresses must be unique.
-- Employee `name`, `email`, and `department` reject blank values.
-- Leave requests require an existing active employee.
-- Supported leave types are `ANNUAL`, `SICK`, and `PERSONAL`.
-- `start_date` cannot be later than `end_date`.
-- New leave requests have `PENDING` status.
-- Only pending leave requests can be approved, rejected, or deleted.
-
-## Error Responses
-
-The application uses `AppError` exceptions for service-level errors. No custom FastAPI exception handler is registered. With server exception propagation disabled, service-level `AppError` paths produce generic HTTP 500 responses. FastAPI and Pydantic validation failures use the default HTTP 422 response containing a `detail` field.
-
-## Testing
-
-Run the pytest suite with:
-
-```bash
-pytest
-```
-
-Tests use an isolated temporary SQLite database and FastAPI's test client. The suite covers health checks, employee and leave request operations, validation, missing resources, status transitions, and edge cases.
-
-## Assumptions
-
-- Database tables are created automatically at application startup.
-- Leave dates are calendar dates without time zones.
-- Leave request reasons are optional.
-- No authentication, authorization, pagination, or deployment requirements were specified.
-
-## Application Profile
-
-- Service owner: Not Specified
-- Deployment platform: Not Specified
-- Cloud provider: Not Specified
-- JIRA board: Not Specified
-- On-call rotation: Not Specified
-
-## Technology stack
-
-- Python 3.11+
-- FastAPI 0.115.6
-- SQLAlchemy 2.0.36
-- Pydantic 2.10.3
-- SQLite
 - Uvicorn
-- pytest 8.3.4
-- HTTPX 0.28.1
+- pytest
 
-## Project structure
+## Project Structure
 
 ```text
 employee-leave-management-service/
 ├── app/
 │   ├── __init__.py
-│   ├── api/
-│   │   ├── __init__.py
-│   │   └── routes.py
+│   ├── main.py
 │   ├── database.py
 │   ├── errors.py
-│   ├── main.py
-│   ├── models.py
-│   ├── repositories.py
-│   ├── schemas.py
-│   └── services.py
+│   ├── models/
+│   │   ├── __init__.py
+│   │   ├── employee.py
+│   │   └── leave_request.py
+│   ├── repositories/
+│   │   ├── __init__.py
+│   │   ├── employee_repository.py
+│   │   └── leave_request_repository.py
+│   ├── routes/
+│   │   ├── __init__.py
+│   │   ├── employees.py
+│   │   ├── leave_requests.py
+│   │   └── health.py
+│   ├── schemas/
+│   │   ├── __init__.py
+│   │   ├── employee.py
+│   │   └── leave_request.py
+│   └── services/
+│       ├── __init__.py
+│       ├── employee_service.py
+│       └── leave_request_service.py
 ├── tests/
+│   ├── conftest.py
 │   └── test_api.py
 ├── .env.example
 ├── requirements.txt
 └── README.md
 ```
+
+The `tests/conftest.py` and `tests/test_api.py` paths contain the pytest test suite.
 
 ## Installation
 
@@ -136,7 +64,7 @@ source .venv/bin/activate
 On Windows:
 
 ```powershell
-py -3.11 -m venv .venv
+python -m venv .venv
 .venv\Scripts\activate
 ```
 
@@ -148,141 +76,137 @@ pip install -r requirements.txt
 
 ## Configuration
 
-The application reads the database connection from the `DATABASE_URL` environment variable.
+The application reads the `DATABASE_URL` environment variable.
 
-A default SQLite database is used when `DATABASE_URL` is not set:
-
-```text
-sqlite:///./employee_leave.db
-```
-
-To configure a different database:
+Copy the example configuration:
 
 ```bash
-export DATABASE_URL="sqlite:///./employee_leave.db"
+cp .env.example .env
 ```
 
-The included `.env.example` documents the supported configuration.
+Default configuration:
 
-## Database
+```text
+DATABASE_URL=sqlite:///./employee_leave.db
+```
 
-SQLite is used as the persistence layer. Tables are created automatically when the application starts.
+`DATABASE_URL` may point to another SQLite database. SQLite is the supported database implementation.
 
-No migration tool is required for the current implementation.
+The application creates the database tables automatically when the application starts.
 
-## Running the application
+## Running the Application
 
-Start the development server with:
+Start the development server:
 
 ```bash
 uvicorn app.main:app --reload
 ```
 
-The API is then available at:
+The API is available at:
 
 ```text
 http://127.0.0.1:8000
 ```
 
-Interactive API documentation is available at:
+Interactive API documentation:
 
 - Swagger UI: `http://127.0.0.1:8000/docs`
 - ReDoc: `http://127.0.0.1:8000/redoc`
 
-## API endpoints
+## API Endpoints
 
 ### Health
 
-| Method | Endpoint | Description |
+| Method | Path | Description |
 |---|---|---|
 | GET | `/health` | Returns service health |
 
 ### Employees
 
-| Method | Endpoint | Description |
+| Method | Path | Description |
 |---|---|---|
 | POST | `/employees` | Create an employee |
 | GET | `/employees` | Retrieve all employees |
-| GET | `/employees/{employee_id}` | Retrieve one employee |
+| GET | `/employees/{employee_id}` | Retrieve an employee by ID |
 
-Example employee:
+Create employee request:
 
 ```json
 {
-  "name": "Jane Smith",
-  "email": "jane.smith@example.com",
+  "name": "Ada Lovelace",
+  "email": "ada@example.com",
   "department": "Engineering",
   "active": true
 }
 ```
 
-`active` defaults to `true`.
+The `active` field defaults to `true`.
 
-### Leave requests
+### Leave Requests
 
-| Method | Endpoint | Description |
+| Method | Path | Description |
 |---|---|---|
 | POST | `/leave-requests` | Submit a leave request |
 | GET | `/leave-requests` | Retrieve all leave requests |
-| GET | `/employees/{employee_id}/leave-requests` | Retrieve requests for an employee |
-| PATCH | `/leave-requests/{leave_request_id}/approve` | Approve a pending request |
-| PATCH | `/leave-requests/{leave_request_id}/reject` | Reject a pending request |
-| DELETE | `/leave-requests/{leave_request_id}` | Delete a pending request |
+| GET | `/employees/{employee_id}/leave-requests` | Retrieve an employee's leave requests |
+| POST | `/leave-requests/{leave_request_id}/approve` | Approve a pending leave request |
+| POST | `/leave-requests/{leave_request_id}/reject` | Reject a pending leave request |
+| DELETE | `/leave-requests/{leave_request_id}` | Delete a pending leave request |
 
-Example leave request:
+Create leave request:
 
 ```json
 {
   "employee_id": 1,
   "leave_type": "ANNUAL",
-  "start_date": "2025-06-02",
-  "end_date": "2025-06-06",
+  "start_date": "2025-07-01",
+  "end_date": "2025-07-05",
   "reason": "Annual vacation"
 }
 ```
 
 New leave requests always have the `PENDING` status.
 
-## Employee model
+## Employee Model
 
-| Field | Type | Description |
-|---|---|---|
-| `id` | integer | Unique employee identifier |
-| `name` | string | Required, non-blank employee name |
-| `email` | string | Required, valid and unique email address |
-| `department` | string | Required, non-blank department |
-| `active` | boolean | Whether the employee may submit leave requests |
+| Field | Type | Required | Description |
+|---|---|---:|---|
+| `id` | integer | response only | Employee identifier |
+| `name` | string | yes | Employee name |
+| `email` | string | yes | Unique employee email |
+| `department` | string | yes | Employee department |
+| `active` | boolean | no | Whether the employee may submit leave requests; defaults to `true` |
 
-## Leave request model
+Names, emails, and departments cannot be blank or whitespace-only.
 
-| Field | Type | Description |
-|---|---|---|
-| `id` | integer | Unique leave request identifier |
-| `employee_id` | integer | Associated employee identifier |
-| `leave_type` | string | `ANNUAL`, `SICK`, or `PERSONAL` |
-| `start_date` | date | First day of leave |
-| `end_date` | date | Last day of leave |
-| `reason` | string or null | Optional explanation |
-| `status` | string | `PENDING`, `APPROVED`, or `REJECTED` |
+## Leave Request Model
 
-## Business rules
+| Field | Type | Required | Description |
+|---|---|---:|---|
+| `id` | integer | response only | Leave request identifier |
+| `employee_id` | integer | yes | Existing employee identifier |
+| `leave_type` | string | yes | `ANNUAL`, `SICK`, or `PERSONAL` |
+| `start_date` | date | yes | First leave date |
+| `end_date` | date | yes | Last leave date |
+| `reason` | string | no | Optional explanation |
+| `status` | string | response only | `PENDING`, `APPROVED`, or `REJECTED` |
+
+## Business Rules
 
 - Employee email addresses must be unique.
-- Employee `name`, `email`, and `department` must not be blank.
-- A leave request can only be created for an existing active employee.
-- Supported leave types are:
-  - `ANNUAL`
-  - `SICK`
-  - `PERSONAL`
+- Employee `name`, `email`, and `department` are required and cannot be blank.
+- Leave requests can only be created for existing active employees.
+- Supported leave types are `ANNUAL`, `SICK`, and `PERSONAL`.
 - `start_date` cannot be after `end_date`.
 - New leave requests default to `PENDING`.
 - Only pending requests can be approved.
 - Only pending requests can be rejected.
-- Approval changes the status to `APPROVED`.
-- Rejection changes the status to `REJECTED`.
 - Only pending requests can be deleted.
+- Approval changes status to `APPROVED`.
+- Rejection changes status to `REJECTED`.
+- Missing employees and leave requests return structured 404 errors.
 
-## Error responses
+## Error Responses
 
 Application errors use this structure:
 
@@ -291,26 +215,7 @@ Application errors use this structure:
   "error": {
     "status": 404,
     "code": "EMPLOYEE_NOT_FOUND",
-    "message": "Employee 1 was not found."
-  }
-}
-```
-
-Validation errors use this structure:
-
-```json
-{
-  "error": {
-    "status": 422,
-    "code": "VALIDATION_ERROR",
-    "message": "Request validation failed.",
-    "details": [
-      {
-        "loc": ["body", "name"],
-        "msg": "Value must not be blank.",
-        "type": "value_error"
-      }
-    ]
+    "message": "Employee 99 was not found"
   }
 }
 ```
@@ -324,26 +229,50 @@ Common error codes include:
 - `INVALID_LEAVE_STATUS`
 - `VALIDATION_ERROR`
 
+Validation errors use this structure:
+
+```json
+{
+  "error": {
+    "status": 422,
+    "code": "VALIDATION_ERROR",
+    "message": "value must not be blank",
+    "details": [
+      {
+        "location": ["body", "name"],
+        "message": "value must not be blank",
+        "type": "value_error"
+      }
+    ]
+  }
+}
+```
+
 ## Testing
 
-Run the generated test suite with:
+The pytest suite uses an isolated in-memory SQLite database through dependency overrides and is located at:
+
+```text
+tests/conftest.py
+tests/test_api.py
+```
+
+Run the test suite with:
 
 ```bash
 pytest
 ```
 
-Run with verbose output:
+Run with more detailed output:
 
 ```bash
 pytest -v
 ```
 
-The test suite is located at `tests/test_api.py`.
-
-Tests use an isolated in-memory SQLite database, preventing test data from affecting the development database. The suite covers:
+The test strategy covers:
 
 - Employee creation and retrieval
-- Unique employee email validation
+- Unique email validation
 - Leave request creation and retrieval
 - Employee-specific leave retrieval
 - Approval, rejection, and deletion
@@ -354,12 +283,14 @@ Tests use an isolated in-memory SQLite database, preventing test data from affec
 - Invalid status transitions
 - Blank required fields
 - Positive, negative, validation, and edge-case scenarios
-- Health checks
+- Health endpoint behavior
+- Isolated test data per test
 
-## Test strategy
+## Assumptions
 
-API tests exercise the FastAPI application through HTTPX and pytest. Each test uses an isolated in-memory SQLite database, and database state is reset between tests. This verifies routing, validation, service rules, repository behavior, persistence, and structured error responses together.
-
-
-
-
+- SQLite is used as the persistence layer.
+- Database tables are created automatically during application startup.
+- The API uses synchronous SQLAlchemy sessions.
+- No authentication or authorization requirements were specified.
+- No pagination requirements were specified.
+- Dates are represented using ISO 8601 `YYYY-MM-DD` strings.
