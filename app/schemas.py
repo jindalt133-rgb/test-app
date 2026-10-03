@@ -7,10 +7,11 @@ class TaskCreate(BaseModel):
 
     @field_validator("title")
     @classmethod
-    def title_must_not_be_blank(cls, value: str) -> str:
-        if not value.strip():
+    def validate_title(cls, value: str) -> str:
+        stripped_value = value.strip()
+        if not stripped_value:
             raise ValueError("title must not be blank")
-        return value.strip()
+        return stripped_value
 
 
 class TaskResponse(BaseModel):
