@@ -285,7 +285,6 @@ The test strategy covers:
 - Positive, negative, validation, and edge-case scenarios
 - Health endpoint behavior
 - Isolated test data per test
-- Isolated test data per test
 
 ## Assumptions
 
