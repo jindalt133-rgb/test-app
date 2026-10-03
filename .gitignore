@@ -9,5 +9,4 @@ venv/
 *.sqlite3
 build/
 dist/
-build/
 *.egg-info/
