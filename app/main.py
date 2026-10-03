@@ -22,8 +22,3 @@ app.include_router(router)
 @app.on_event("startup")
 def startup() -> None:
     init_db()
-
-
-@app.on_event("startup")
-def startup() -> None:
-    init_db()
