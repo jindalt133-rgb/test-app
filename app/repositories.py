@@ -15,13 +15,21 @@ class EmployeeRepository:
         return employee
 
     def list(self) -> list[Employee]:
-        return list(self.db.scalars(select(Employee).order_by(Employee.id)).all())
+        return list(
+            self.db.scalars(
+                select(Employee).order_by(Employee.id)
+            ).all()
+        )
 
     def get(self, employee_id: int) -> Employee | None:
-        return self.db.scalar(select(Employee).where(Employee.id == employee_id))
+        return self.db.scalar(
+            select(Employee).where(Employee.id == employee_id)
+        )
 
     def get_by_email(self, email: str) -> Employee | None:
-        return self.db.scalar(select(Employee).where(Employee.email == email))
+        return self.db.scalar(
+            select(Employee).where(Employee.email == email)
+        )
 
 
 class LeaveRequestRepository:
@@ -35,13 +43,25 @@ class LeaveRequestRepository:
         return leave_request
 
     def list(self) -> list[LeaveRequest]:
-        return list(self.db.scalars(select(LeaveRequest).order_by(LeaveRequest.id)).all())
+        return list(
+            self.db.scalars(
+                select(LeaveRequest).order_by(LeaveRequest.id)
+            ).all()
+        )
 
     def list_by_employee(self, employee_id: int) -> list[LeaveRequest]:
-        return list(self.db.scalars(select(LeaveRequest).where(LeaveRequest.employee_id == employee_id).order_by(LeaveRequest.id)).all())
+        return list(
+            self.db.scalars(
+                select(LeaveRequest)
+                .where(LeaveRequest.employee_id == employee_id)
+                .order_by(LeaveRequest.id)
+            ).all()
+        )
 
     def get(self, leave_request_id: int) -> LeaveRequest | None:
-        return self.db.scalar(select(LeaveRequest).where(LeaveRequest.id == leave_request_id))
+        return self.db.scalar(
+            select(LeaveRequest).where(LeaveRequest.id == leave_request_id)
+        )
 
     def save(self, leave_request: LeaveRequest) -> LeaveRequest:
         self.db.commit()
