@@ -1,6 +1,6 @@
 # Employee Leave Management Service
 
-A REST API for creating employees and managing employee leave requests.
+A REST API for managing employees and employee leave requests.
 
 ## Technology Stack
 
