@@ -1,5 +1,4 @@
 from fastapi import FastAPI
-from fastapi.exceptions import RequestValidationError
 
 from app.api.routes import router
 from app.database import init_db
@@ -8,6 +7,7 @@ from app.errors import (
     app_error_handler,
     validation_error_handler,
 )
+from fastapi.exceptions import RequestValidationError
 
 app = FastAPI(
     title="Employee Leave Management Service",
