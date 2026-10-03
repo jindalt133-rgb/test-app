@@ -138,24 +138,42 @@ def test_delete_missing_task_returns_structured_not_found_error(client: TestClie
     }
 
 
-def test_missing_title_returns_structured_validation_error(client: TestClient):
+def test_missing_title_returns_structured_validation_error(
+    client: TestClient,
+):
     response = client.post("/tasks", json={})
-    body = response.json()
 
     assert response.status_code == 422
+    body = response.json()
+
     assert body["error"]["code"] == "validation_error"
     assert body["error"]["message"] == "Invalid request"
-    assert body["error"]["details"] == [{"loc": ["body", "title"], "msg": "Field required", "type": "missing"}]
+    assert body["error"]["details"] == [
+        {
+            "loc": ["body", "title"],
+            "msg": "Field required",
+            "type": "missing",
+        }
+    ]
 
 
-def test_blank_title_returns_structured_validation_error(client: TestClient):
+def test_blank_title_returns_structured_validation_error(
+    client: TestClient,
+):
     response = client.post("/tasks", json={"title": "   "})
-    body = response.json()
 
     assert response.status_code == 422
+    body = response.json()
+
     assert body["error"]["code"] == "validation_error"
     assert body["error"]["message"] == "Invalid request"
-    assert body["error"]["details"] == [{"loc": ["body", "title"], "msg": "Value error, title must not be blank", "type": "value_error"}]
+    assert body["error"]["details"] == [
+        {
+            "loc": ["body", "title"],
+            "msg": "Value error, title must not be blank",
+            "type": "value_error",
+        }
+    ]
 
 
 def test_invalid_title_type_returns_structured_validation_error(client: TestClient):
