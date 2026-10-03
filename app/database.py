@@ -1,38 +1,34 @@
-import os
 from collections.abc import Generator
 
-from dotenv import load_dotenv
 from sqlalchemy import create_engine
 from sqlalchemy.orm import DeclarativeBase, Session, sessionmaker
 
-load_dotenv()
+from app.config import get_settings
 
-DATABASE_URL = os.getenv("DATABASE_URL", "sqlite:///./employee_leave.db")
+
+class Base(DeclarativeBase):
+    pass
+
+
+database_url = get_settings().database_url
 
 connect_args = {}
-if DATABASE_URL.startswith("sqlite"):
+if database_url.startswith("sqlite"):
     connect_args["check_same_thread"] = False
 
 engine = create_engine(
-    DATABASE_URL,
+    database_url,
     connect_args=connect_args,
-    future=True,
 )
 
 SessionLocal = sessionmaker(
     bind=engine,
-    autoflush=False,
     autocommit=False,
-    expire_on_commit=False,
+    autoflush=False,
 )
 
 
-class Base(DeclarativeBase):
-    """Base class for SQLAlchemy models."""
-
-
 def get_db() -> Generator[Session, None, None]:
-    """Yield a database session for one request."""
     db = SessionLocal()
     try:
         yield db
@@ -40,8 +36,7 @@ def get_db() -> Generator[Session, None, None]:
         db.close()
 
 
-def init_db() -> None:
-    """Create all database tables."""
-    from app import models  # noqa: F401
+def create_tables() -> None:
+    from app import models
 
     Base.metadata.create_all(bind=engine)
