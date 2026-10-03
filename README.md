@@ -1,47 +1,74 @@
 # task-management-service
 
-A minimal REST API for managing tasks. The service uses FastAPI, Pydantic, and SQLite.
+A minimal Task Management REST API built with Python 3.11+, FastAPI, Pydantic, and SQLite.
 
-## Requirements
+## Overview
 
-- Python 3.11+
-- pip
+The service supports:
+
+- Creating tasks
+- Retrieving all tasks
+- Retrieving a task by ID
+- Deleting tasks
+- Checking service health
+
+Each task contains:
+
+- `id`: Integer identifier
+- `title`: Required, non-blank string
+- `completed`: Boolean that defaults to `false`
+
+The application stores tasks in SQLite. The database path defaults to `tasks.db` and can be changed with the `TASK_DATABASE_PATH` environment variable.
+
+## Application structure
+
+```text
+app/
+  __init__.py
+  database.py
+  main.py
+  schemas.py
+pyproject.toml
+README.md
+tests/
+  test_api.py
+```
+
+The test suite uses pytest and FastAPI's `TestClient`. Tests use an isolated temporary SQLite database by creating the application with a temporary database path.
 
 ## Installation
+
+Python 3.11 or newer is required.
 
 Create and activate a virtual environment:
 
 ```bash
-python -m venv .venv
+python3.11 -m venv .venv
 source .venv/bin/activate
 ```
 
-On Windows:
-
-```powershell
-.venv\Scripts\activate
-```
-
-Install dependencies:
+Install application and test dependencies:
 
 ```bash
-pip install -r requirements.txt
+pip install -e ".[test]"
 ```
 
-## Run
-
-Start the application with:
+## Run the application
 
 ```bash
 uvicorn app.main:app --reload
 ```
 
-The API is available at `http://127.0.0.1:8000`.
+The API will be available at:
 
-The SQLite database path defaults to `tasks.db`. Set `TASK_DATABASE_PATH` to use a different database file:
+```text
+http://127.0.0.1:8000
+```
+
+To use a different SQLite database file:
 
 ```bash
-TASK_DATABASE_PATH=custom-tasks.db uvicorn app.main:app --reload
+TASK_DATABASE_PATH=/path/to/tasks.db uvicorn app.main:app --reload
 ```
 
 ## API endpoints
@@ -71,17 +98,38 @@ Request:
 
 ```json
 {
-  "title": "Buy groceries",
-  "completed": false
+  "title": "Write documentation"
 }
 ```
 
-`title` is required and must not be blank. `completed` defaults to `false`.
+`completed` is optional and defaults to `false`.
+
+Response status: `201 Created`
+
+```json
+{
+  "id": 1,
+  "title": "Write documentation",
+  "completed": false
+}
+```
 
 ### Retrieve all tasks
 
 ```http
 GET /tasks
+```
+
+Response:
+
+```json
+[
+  {
+    "id": 1,
+    "title": "Write documentation",
+    "completed": false
+  }
+]
 ```
 
 ### Retrieve a task by ID
@@ -90,12 +138,14 @@ GET /tasks
 GET /tasks/{task_id}
 ```
 
-A missing task returns HTTP 404:
+Response status: `200 OK`
+
+A missing task returns status `404`:
 
 ```json
 {
   "error": {
-    "code": "task_not_found",
+    "code": "TASK_NOT_FOUND",
     "message": "Task not found"
   }
 }
@@ -107,67 +157,77 @@ A missing task returns HTTP 404:
 DELETE /tasks/{task_id}
 ```
 
-A successful deletion returns HTTP 204 with no response body. A missing task returns the structured 404 response described above.
+A successful deletion returns status `204 No Content`.
+
+A missing task returns the same structured `404` response as retrieving a missing task.
 
 ## Validation errors
 
-Invalid request data returns HTTP 422 with this structure:
+A missing or blank `title` returns status `422`:
 
 ```json
 {
   "error": {
-    "code": "validation_error",
+    "code": "VALIDATION_ERROR",
     "message": "Invalid request",
     "details": [
       {
-        "loc": ["body", "title"],
+        "type": "value_error",
+        "loc": [
+          "body",
+          "title"
+        ],
         "msg": "Value error, title must not be blank",
-        "type": "value_error"
+        "input": "   "
       }
     ]
   }
 }
 ```
 
-## Project structure
-
-```text
-app/
-├── __init__.py
-├── database.py
-├── main.py
-└── schemas.py
-tests/
-└── test_api.py
-requirements.txt
-README.md
-```
-
-- `app/main.py` defines the FastAPI application, routes, and error handlers.
-- `app/database.py` contains SQLite initialization and task data access.
-- `app/schemas.py` contains Pydantic request and response models.
-- `tests/test_api.py` contains the pytest test suite.
-
 ## Testing
 
-The test suite uses pytest, FastAPI `TestClient`, and an isolated SQLite database. Each test client uses a temporary SQLite database, so tests do not use the development database.
+The test suite is provided in `tests/test_api.py`. It uses pytest and FastAPI's `TestClient`.
 
-Run the test suite with:
+Run all tests:
 
 ```bash
 pytest
 ```
 
-The test suite covers:
+Run the API test module directly:
 
-- The health endpoint
-- Task creation with default and explicit completion values
-- Title whitespace handling
-- Retrieval of all tasks, including empty results and ID ordering
-- Retrieval of a task by ID
-- Deletion of tasks and missing-task deletion errors
-- Missing and blank titles
-- Invalid title and completion values
-- Invalid task identifiers
-- Structured validation and not-found errors
-- Database isolation between application instances
+```bash
+pytest tests/test_api.py
+```
+
+Tests use a separate temporary SQLite database for each test or test application instance, so they do not use the development database.
+
+### FILE: pyproject.toml
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "task-management-service"
+version = "0.1.0"
+description = "A minimal Task Management REST API"
+requires-python = ">=3.11"
+dependencies = [
+    "fastapi>=0.115,<1.0",
+    "pydantic>=2.7,<3.0",
+    "uvicorn[standard]>=0.30,<1.0",
+]
+
+[project.optional-dependencies]
+test = [
+    "pytest>=8.0,<9.0",
+    "httpx>=0.27,<1.0",
+]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+
+[tool.setuptools.packages.find]
+include = ["app*"]
+
