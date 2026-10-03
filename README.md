@@ -4,34 +4,25 @@
 
 A minimal Task Management REST API built with Python 3.11+, FastAPI, Pydantic, and SQLite.
 
-Tasks contain:
-
-- `id`
-- `title`
-- `completed`
-
-The SQLite database path is configured with the `TASK_DATABASE_PATH` environment variable. It defaults to `tasks.db`.
+The API supports creating, listing, retrieving, and deleting tasks. Each task has an ID, a required non-blank title, and a completed status that defaults to `false`.
 
 ## Application structure
 
 ```text
 app/
 ├── __init__.py
-├── db.py
+├── api.py
+├── database.py
 ├── main.py
-├── repository.py
-└── schemas.py
-```
+├── models.py
+└── repository.py
 
-Test structure:
-
-```text
 tests/
-├── conftest.py
-└── test_api.py
+└── test_tasks.py
+pyproject.toml
 ```
 
-Tests use pytest and FastAPI's `TestClient`. The test fixture should set `TASK_DATABASE_PATH` to a temporary SQLite file so tests use an isolated database.
+The test file is planned at `tests/test_tasks.py` and is generated separately.
 
 ## Installation
 
@@ -42,25 +33,41 @@ python3.11 -m venv .venv
 source .venv/bin/activate
 ```
 
-Install dependencies:
+Install application and test dependencies:
 
 ```bash
-pip install -r requirements.txt
+pip install -e ".[test]"
+```
+
+## Configuration
+
+The SQLite database path is configured with the `TASK_DB_PATH` environment variable.
+
+If it is not set, the application uses `tasks.db` in the current working directory.
+
+Example:
+
+```bash
+export TASK_DB_PATH=tasks.db
 ```
 
 ## Run command
 
-Start the API with:
+Start the development server with:
 
 ```bash
 uvicorn app.main:app --reload
 ```
 
-The API is available at `http://127.0.0.1:8000`.
+The API will be available at:
+
+```text
+http://127.0.0.1:8000
+```
 
 ## API endpoints
 
-### Health check
+### Health
 
 ```http
 GET /health
@@ -85,13 +92,14 @@ Request:
 
 ```json
 {
-  "title": "Write documentation"
+  "title": "Write documentation",
+  "completed": false
 }
 ```
 
-`completed` defaults to `false`.
+The `completed` field is optional and defaults to `false`.
 
-Response status: `201 Created`
+Response: `201 Created`
 
 ```json
 {
@@ -107,7 +115,7 @@ Response status: `201 Created`
 GET /tasks
 ```
 
-Response status: `200 OK`
+Response: `200 OK`
 
 ```json
 [
@@ -125,9 +133,17 @@ Response status: `200 OK`
 GET /tasks/{task_id}
 ```
 
-Response status: `200 OK`
+Response: `200 OK`
 
-A missing task returns `404 Not Found`:
+```json
+{
+  "id": 1,
+  "title": "Write documentation",
+  "completed": false
+}
+```
+
+If the task does not exist, the response is `404 Not Found`:
 
 ```json
 {
@@ -144,45 +160,50 @@ A missing task returns `404 Not Found`:
 DELETE /tasks/{task_id}
 ```
 
-Response status: `204 No Content`
+Response: `204 No Content`
 
-A missing task returns the same structured `404 Not Found` response.
+If the task does not exist, the response is `404 Not Found` with the same structured error shown above.
 
 ## Validation errors
 
-A task title is required and must not be blank. Invalid input returns `422 Unprocessable Entity`:
+A blank title is invalid. Validation errors return `422 Unprocessable Entity`:
 
 ```json
 {
-  "detail": {
-    "code": "VALIDATION_ERROR",
-    "message": "Invalid request",
-    "errors": [
-      {
-        "type": "value_error",
-        "loc": ["body", "title"],
-        "msg": "Value error, title must not be blank"
-      }
-    ]
-  }
+  "code": "VALIDATION_ERROR",
+  "detail": [
+    {
+      "type": "value_error",
+      "loc": [
+        "body",
+        "title"
+      ],
+      "msg": "Value error, title must not be blank",
+      "input": "   "
+    }
+  ]
 }
 ```
 
 ## Testing
 
-The test suite uses pytest, FastAPI `TestClient`, and an isolated temporary SQLite database.
+Tests use `pytest` and FastAPI's `TestClient`, with `httpx` declared as a compatible client dependency.
 
-Run all tests with:
+Run the test suite with:
 
 ```bash
 pytest
 ```
 
-Run the API tests directly with:
+Tests use an isolated SQLite database created under pytest's `tmp_path` fixture. The application factory accepts an explicit database path so tests do not use the development database.
 
-```bash
-pytest tests/test_api.py
-```
+The planned test coverage includes:
 
-The tests cover the health endpoint, task creation, retrieving all tasks, retrieving a task by ID, deleting a task, blank titles, and missing tasks.
+- Health endpoint
+- Task creation
+- Retrieving all tasks
+- Retrieving a task by ID
+- Deleting a task
+- Blank title validation
+- Missing task handling
 
