@@ -50,7 +50,7 @@ employee-leave-management-service/
 └── README.md
 ```
 
-The `tests/conftest.py` and `tests/test_api.py` paths are the expected pytest test locations for the generated test suite.
+The `tests/conftest.py` and `tests/test_api.py` paths contain the pytest test suite.
 
 ## Installation
 
@@ -284,6 +284,7 @@ The test strategy covers:
 - Blank required fields
 - Positive, negative, validation, and edge-case scenarios
 - Health endpoint behavior
+- Isolated test data per test
 - Isolated test data per test
 
 ## Assumptions
