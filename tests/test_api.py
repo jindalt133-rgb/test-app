@@ -1,4 +1,160 @@
-import from approved exact content
+from __future__ import annotations
+
+from typing import Any
+
+import pytest
+from fastapi.testclient import TestClient
+
+
+def assert_app_error(
+    response,
+    *,
+    status: int,
+    code: str,
+    message: str | None = None,
+) -> dict[str, Any]:
+    assert response.status_code == status
+    payload = response.json()
+    assert "error" in payload
+    assert payload["error"]["status"] == status
+    assert payload["error"]["code"] == code
+    if message is not None:
+        assert payload["error"]["message"] == message
+    return payload
+
+
+def employee_payload(
+    *,
+    name: str = "Ada Lovelace",
+    email: str = "ada@example.com",
+    department: str = "Engineering",
+    active: bool | None = None,
+) -> dict[str, Any]:
+    payload = {"name": name, "email": email, "department": department}
+    if active is not None:
+        payload["active"] = active
+    return payload
+
+
+def leave_payload(
+    employee_id: int,
+    *,
+    leave_type: str = "ANNUAL",
+    start_date: str = "2025-07-01",
+    end_date: str = "2025-07-05",
+    reason: str | None = "Annual vacation",
+) -> dict[str, Any]:
+    return {"employee_id": employee_id, "leave_type": leave_type, "start_date": start_date, "end_date": end_date, "reason": reason}
+
+
+def create_employee(client: TestClient, *, email: str = "ada@example.com", active: bool | None = None) -> dict[str, Any]:
+    response = client.post("/employees", json=employee_payload(email=email, active=active))
+    assert response.status_code == 201
+    return response.json()
+
+
+def create_leave_request(client: TestClient, employee_id: int, **overrides: Any) -> dict[str, Any]:
+    payload = leave_payload(employee_id)
+    payload.update(overrides)
+    response = client.post("/leave-requests", json=payload)
+    assert response.status_code == 201
+    return response.json()
+
+
+def assert_validation_error(response, *, location: list[str] | None = None, message: str | None = None) -> dict[str, Any]:
+    payload = assert_app_error(response, status=422, code="VALIDATION_ERROR")
+    details = payload["error"]["details"]
+    assert isinstance(details, list) and details
+    if location is not None:
+        assert any(detail["location"] == location for detail in details)
+    if message is not None:
+        assert any(detail["message"] == message for detail in details)
+    return payload
+
+
+def test_health_endpoint_returns_ok(client: TestClient):
+    response = client.get("/health")
+    assert response.status_code == 200
+    assert response.json() == {"status": "ok"}
+
+
+def test_create_employee_returns_created_employee_with_default_active_value(client: TestClient):
+    response = client.post("/employees", json=employee_payload(name="  Ada Lovelace  ", email="  ada@example.com  ", department="  Engineering  "))
+    assert response.status_code == 201
+    body = response.json()
+    assert isinstance(body["id"], int)
+    assert body["name"] == "Ada Lovelace"
+    assert body["email"] == "ada@example.com"
+    assert body["department"] == "Engineering"
+    assert body["active"] is True
+
+
+def test_create_employee_preserves_explicit_inactive_value(client: TestClient):
+    employee = create_employee(client, email="inactive@example.com", active=False)
+    assert employee["active"] is False
+
+
+def test_get_employees_returns_created_employees_in_id_order(client: TestClient):
+    first = create_employee(client, email="first@example.com")
+    second = create_employee(client, email="second@example.com")
+    response = client.get("/employees")
+    assert response.status_code == 200
+    assert [employee["id"] for employee in response.json()] == [first["id"], second["id"]]
+
+
+def test_get_employee_returns_employee_by_id(client: TestClient):
+    employee = create_employee(client)
+    response = client.get(f"/employees/{employee['id']}")
+    assert response.status_code == 200
+    assert response.json() == employee
+
+
+def test_get_missing_employee_returns_structured_not_found_error(client: TestClient):
+    response = client.get("/employees/999999")
+    assert_app_error(response, status=404, code="EMPLOYEE_NOT_FOUND", message="Employee 999999 was not found")
+
+
+def test_duplicate_employee_email_returns_conflict_error(client: TestClient):
+    create_employee(client, email="duplicate@example.com")
+    response = client.post("/employees", json=employee_payload(email="duplicate@example.com"))
+    assert_app_error(response, status=409, code="DUPLICATE_EMPLOYEE_EMAIL", message="Employee email 'duplicate@example.com' already exists")
+
+
+@pytest.mark.parametrize("field", ["name", "email", "department"])
+@pytest.mark.parametrize("blank_value", ["", "   ", "\t\n"])
+def test_blank_employee_fields_return_validation_error(client: TestClient, field: str, blank_value: str):
+    payload = employee_payload()
+    payload[field] = blank_value
+    response = client.post("/employees", json=payload)
+    assert_validation_error(response, location=["body", field], message="value must not be blank")
+
+
+def test_create_leave_request_returns_pending_request(client: TestClient):
+    employee = create_employee(client)
+    response = client.post("/leave-requests", json=leave_payload(employee["id"]))
+    assert response.status_code == 201
+    assert response.json()["status"] == "PENDING"
+
+
+def test_inactive_employee_cannot_create_leave_request(client: TestClient):
+    employee = create_employee(client, email="inactive@example.com", active=False)
+    response = client.post("/leave-requests", json=leave_payload(employee["id"]))
+    assert_app_error(response, status=409, code="INACTIVE_EMPLOYEE", message=f"Employee {employee['id']} is inactive")
+
+
+def test_approve_and_reject_pending_leave_requests(client: TestClient):
+    employee = create_employee(client)
+    approved = create_leave_request(client, employee["id"])
+    rejected = create_leave_request(client, employee["id"], leave_type="SICK")
+    assert client.post(f"/leave-requests/{approved['id']}/approve").json()["status"] == "APPROVED"
+    assert client.post(f"/leave-requests/{rejected['id']}/reject").json()["status"] == "REJECTED"
+
+
+def test_pending_leave_request_can_be_deleted(client: TestClient):
+    employee = create_employee(client)
+    request = create_leave_request(client, employee["id"])
+    response = client.delete(f"/leave-requests/{request['id']}")
+    assert response.status_code == 204
 
 
 def test_health_endpoint_returns_healthy_status(client: TestClient) -> None:
